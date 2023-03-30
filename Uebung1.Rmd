@@ -5,14 +5,15 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-```{r}
+```{r include=FALSE}
 options(repos = list(CRAN="http://cran.rstudio.com/"))
 ```
 
 # Übung 1
 ## A2 
-```{r}
+```{r include=FALSE}
 install.packages("HSAUR2")
+library(HSAUR2)
 ```
 
 ### (i)
@@ -61,7 +62,83 @@ median(Forbes2000[Forbes2000$country=='Germany',]$profits, na.rm=TRUE)
 ```{r}
 Forbes2000[Forbes2000$profits<0 & Forbes2000$country=='Germany',]
 ```
+
 ### (iii)
+```{r}
+Forbes2000[Forbes2000$country=='Bermunda',]$category
+```
+
+### (iv)
+
+```{r}
+for (country in unique(Forbes2000$country)) {
+  print(country)
+  print(median(Forbes2000[Forbes2000$country==country,]$sales, na.rm=TRUE))
+}
+```
+
+### (v)
+
+```{r}
+for (country in unique(Forbes2000$country)) {
+  print(country)
+  print(nrow(Forbes2000[Forbes2000$country==country & Forbes2000$profits >= 5 * 10^9,]))
+}
+```
+
+## A4
+
+### (i)
+
+```{r}
+hist(Forbes2000$marketvalue)
+```
+```{r}
+hist(log(Forbes2000$marketvalue))
+```
+
+### (ii)
+
+```{r}
+plot(log(marketvalue)~log(sales), data=Forbes2000, xlab="marketvalue", ylab="sales", pch=4)
+```
+
+### (iii)
+
+```{r}
+plot(log(marketvalue)~log(sales), data=Forbes2000, xlab="marketvalue", ylab="sales", pch=4)
+
+abline(lm(log(marketvalue)~log(sales), Forbes2000))
+```
+
+## A5
+
+### (i)
+
+```{r}
+pnorm(3, mean = 0, sd = 1, lower.tail = FALSE)
+```
+
+### (ii)
+
+```{r}
+pnorm(6, mean = 0, sd = 1, lower.tail = FALSE)
+```
+
+### (iii)
+
+```{r}
+pbinom(10, size = 10, prob = 0.8)
+```
+
+### (iv)
+
+```{r}
+pchisq(6.5, df=2, lower.tail = FALSE)
+```
+
+## A6
+
 ```{r}
 
 ```
