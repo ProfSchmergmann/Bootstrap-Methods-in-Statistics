@@ -1,6 +1,6 @@
 ---
 title: "boot_uebung1_team1"
-author: "Sven bergmann"
+author: "Sven Bergmann, Malte Lennartz"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---
