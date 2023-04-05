@@ -1,0 +1,9 @@
+---
+title: "boot_uebung2_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+
