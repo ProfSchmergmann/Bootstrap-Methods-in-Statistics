@@ -7,6 +7,7 @@
         <entry key="file://$PROJECT_DIR$/Uebung1.Rmd">
           <value>
             <RMarkdownRenderProfile>
+              <option name="lastOutput" value="$PROJECT_DIR$/Uebung1.html" />
               <option name="outputDirectoryUrl" value="file://$PROJECT_DIR$" />
             </RMarkdownRenderProfile>
           </value>
