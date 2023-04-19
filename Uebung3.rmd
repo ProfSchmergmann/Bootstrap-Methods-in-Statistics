@@ -1,0 +1,36 @@
+---
+title: "boot_uebung2_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+n <-50
+m <- 2000
+intervals <- 500
+
+x <- runif(n, min = 0, max = 6)
+print(x)
+```
+```{r}
+m <-10
+bootstrap_matrix <- replicate(m, sample(x, replace = TRUE, size=n))
+```
+```{r}
+T_i <- function (bootstrap_sample, arithmetic_mean) {
+  return(sqrt(length(bootstrap_sample))*(mean(bootstrap_sample)-arithmetic_mean) / sd(bootstrap_sample))
+}
+```
+```{r}
+T <- apply(X=bootstrap_matrix,MARGIN =  1, FUN = T_i, arithmetic_mean=mean(x))
+sort(T)
+print(T)
+```
+```{r}
+Quantile <- function (alpha, T, arithmetic_mean, standard_deviation, m){
+  return(arithmetic_mean-standard_deviation*T[1-int(alpha*m)] * sqrt(m),
+         arithmetic_mean-standard_deviation*T[int(alpha*m)] * sqrt(m))
+}
+```
