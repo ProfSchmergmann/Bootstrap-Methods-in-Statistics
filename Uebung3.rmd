@@ -6,31 +6,37 @@ output:
   html_document:
     df_print: paged
 ---
+### Exercise 3.6.
+Repeat the simulation study of Example 3.3.3 but now with n = 50, m = 2000, and 500 intervals.
 ```{r}
-n <-50
+n <- 50
 m <- 2000
-intervals <- 500
-
-x <- runif(n, min = 0, max = 6)
-print(x)
-```
-```{r}
-m <-10
-bootstrap_matrix <- replicate(m, sample(x, replace = TRUE, size=n))
+intervals <- 100
 ```
 ```{r}
 T_i <- function (bootstrap_sample, arithmetic_mean) {
   return(sqrt(length(bootstrap_sample))*(mean(bootstrap_sample)-arithmetic_mean) / sd(bootstrap_sample))
 }
-```
-```{r}
-T <- apply(X=bootstrap_matrix,MARGIN =  1, FUN = T_i, arithmetic_mean=mean(x))
-sort(T)
-print(T)
-```
-```{r}
-Quantile <- function (alpha, T, arithmetic_mean, standard_deviation, m){
-  return(arithmetic_mean-standard_deviation*T[1-int(alpha*m)] * sqrt(m),
-         arithmetic_mean-standard_deviation*T[int(alpha*m)] * sqrt(m))
+
+Quantile <- function (alpha, T, arithmetic_mean, standard_deviation,m, n){
+  return(c(arithmetic_mean-standard_deviation*T[floor(m*(1-(1-alpha)/2))] * 1 / sqrt(n),
+         arithmetic_mean-standard_deviation*T[ceiling(m*(1-alpha)/2)] * 1 / sqrt(n)))
 }
 ```
+```{r}
+Resampling <- function (n, m, alpha) {
+  x <- runif(n, min = 0, max = 6)
+  bootstrap_matrix <- replicate(m, sample(x, replace = TRUE, size=n))
+  T <- sort(apply(X=bootstrap_matrix,MARGIN = 2, FUN = T_i, arithmetic_mean=mean(x)))
+  return(Quantile(alpha = alpha, T=T, arithmetic_mean = mean(x), standard_deviation = sd(x), m, n))
+}
+```
+```{r}
+interval_alpha <- replicate(n = intervals, expr = Resampling(n, m, alpha = 0.8))
+print(interval_alpha)
+```
+```{r}
+coverage <- apply(X = interval_alpha, MARGIN = 2, FUN = function(x) x[1] < 3 && 3 < x[2])
+print(mean(coverage))
+```
+
