@@ -1,0 +1,29 @@
+---
+title: "boot_uebung2_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## Example 4.2.1
+```{r}
+Resampling41 <- function(n, mean, m) {
+  X <- rnorm(n = n, mean = mean)
+  bootstrap_matrix <- replicate(m, sample(X, replace = TRUE, size = n))
+  mu_star_n_k <- apply(X = bootstrap_matrix, MARGIN = 2, FUN = mean)
+  s_star_n_k <- apply(X = bootstrap_matrix, MARGIN = 2, FUN = sd)
+  T_star_n_k <- sqrt(n) * abs((mu_star_n_k - mean(X)) / s_star_n_k)
+  t <- sqrt(n) * abs((mean(X) - 17) / sd(X))
+  p_values <- T_star_n_k > t
+  return(mean(p_values))
+}
+```
+
+```{r}
+p_values_cdf <- ecdf(replicate(n=100, expr = Resampling41(n=100, mean = 17, m=100)))
+plot(p_values_cdf, xlim = c(0,1))
+abline(0,1,add=TRUE)
+```
+
