@@ -1,0 +1,41 @@
+---
+title: "boot_uebung5_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+```{r}
+# install.packages("multimode")
+library(multimode)
+```
+```{r}
+countModes <- function(data = stamps, bw = 0.05) {
+  f_n <- density(data, bw = bw)
+  y <- f_n$y
+
+  hasOneMode <- function(left, middle, right) {
+    return(left < middle && middle > right)
+  }
+
+  modes <- 0
+  for (i in 1:(length(y) - 2)) {
+    modes <- modes + hasOneMode(y[i], y[i + 1], y[i + 2])
+  }
+  return(modes)
+}
+```
+```{r}
+compute_min_bw <- function(max_bw = 1, min_bw = 0.005, epsilon = 0.0001) {
+  if (abs(max_bw - min_bw) < epsilon) return(c(max_bw, min_bw))
+  if (countModes(max_bw) > 1) {
+    return(compute_min_bw(max_bw = max_bw, min_bw = (max_bw - min_bw) / 2))
+  } else {
+    return(compute_min_bw(max_bw = (max_bw - min_bw) / 2), min_bw = min_bw)
+  }
+}
+bw_opt <- compute_min_bw()[0]
+plot(density(stamps, bw = bw_opt))
+plot(density(stamps, bw = 0.48))
+```
