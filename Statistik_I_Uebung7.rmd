@@ -1,0 +1,21 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+Ein Autohersteller behauptet, dass der Erwartungswert $\mu$ des Benzinverbrauchs für einen neu entwickelten Autotyp höchstens $\mu_0 = 6$ Liter pro 100 km beträgt.
+Eine Verbraucherzentrale vermutet, dass der Hersteller eine zu niedrige Schranke für $μ$ angegeben hat.
+Sie überprüft deshalb 20 Autos des neuen Typs auf ihren Verbrauch und erhält die nachfolgend genannten Werte.
+6.47 5.49 6.40 5.78 5.82 6.31 6.33 6.50 6.27 6.08
+5.69 6.38 6.04 6.10 6.44 6.57 6.26 6.21 6.40 6.34
+Gehen Sie davon aus, dass die erhaltenen Werte Beobachtungen von $n = 20$ unabhängigen Zufallsvariablen, je mit derselben $\mathcal{N}(\mu, 0.09)$-Verteilung sind und beurteilen Sie unter Heranziehung eines geeigneten statistischen Tests zum Testniveau $\alpha = 0.05$, ob die erhaltenen Werte mit der Behauptung des Herstellers vereinbar sind.
+Fertigen Sie eine graphische Darstellung der Gütefunktion des Tests und bestimmen Sie die Wahrscheinlichkeit für einen Fehler 2. Art im Falle $\mu = 6.5$ und $\mu = 7$.
+---
+```{r}
+werte <- c(6.47, 5.49, 6.40, 5.78, 5.82, 6.31, 6.33, 6.50, 6.27, 6.08, 5.69, 6.38, 6.04, 6.10, 6.44, 6.57, 6.26, 6.21, 6.40, 6.34)
+x <- seq(-10, 10, by = .001)
+y <- dnorm(x, mean = 0, sd = 0.09)
+# plot(x, y)
+plot(werte)
+```
