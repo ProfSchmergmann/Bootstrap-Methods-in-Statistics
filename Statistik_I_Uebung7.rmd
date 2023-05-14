@@ -14,8 +14,9 @@ Fertigen Sie eine graphische Darstellung der Gütefunktion des Tests und bestimm
 ---
 ```{r}
 werte <- c(6.47, 5.49, 6.40, 5.78, 5.82, 6.31, 6.33, 6.50, 6.27, 6.08, 5.69, 6.38, 6.04, 6.10, 6.44, 6.57, 6.26, 6.21, 6.40, 6.34)
-x <- seq(-10, 10, by = .001)
-y <- dnorm(x, mean = 0, sd = 0.09)
-# plot(x, y)
-plot(werte)
+
+print(c('Stichprobenmittelwert: ', mean(werte)))
+print(c('Stichprobenvarianz: ', var(werte)))
+print(c('Stichprobenstandardabweichung: ', sd(werte)))
+t.test(werte, mu=6, alternative = 'greater')
 ```
