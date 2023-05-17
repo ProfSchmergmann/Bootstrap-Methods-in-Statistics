@@ -1,0 +1,45 @@
+---
+title: "boot_uebung6_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## Exercise 4.5.
+In the simulation study given under Example 4.3.3 only the type 1 error
+was analysed.
+To get an idea of the power of these bootstrap based tests, generate an
+iid. sample $X_1, \ldots, X_n \sim F$, where $F$ is the $\chi^2$ df. with one degree of freedom.
+Now, assume $H_0 : F \in \{EXP(\lambda):\lambda>0\}$ and check this null hypothesis with CvM and KM based bootstrap tests $(m = 500)$.
+Repeat this with 1000 different original samples.
+Calculate the average p-value and the relative number of rejections for $0.1$ as type 1
+error.
+Do this simulation study for sample sizes $n = 20, 50, 100$.
+```{r}
+calc_dwsquared <- function(x) {
+  lambda_estimate <- 1 / mean(x)
+  z <- sort(pexp(q = x, rate = lambda_estimate))
+  n <- length(z)
+  D <- n^(1 / 2) * max(((1:n) / n) - z, z - (((1:n) - 1) / n))
+  W <- sum((z - (2 * (1:n) - 1) / (2 * n))^2) + 1 / (12 * n)
+  return(c(D, W))
+}
+
+resampling_44 <- function(x, m = 500) {
+  bootstrap_matrix <- replicate(m, rexp(n = length(x), rate = 1 / mean(x)))
+  D_W <- apply(X = bootstrap_matrix, MARGIN = 2, FUN = calc_dwsquared)
+  return(D_W)
+}
+```
+```{r}
+n <- c(20, 50, 100)
+x <- rchisq(n[3], df = 1)
+D_W_original <- calc_dwsquared(x)
+D_W_bootstrap <- resampling_44(x)
+p_values_d <- mean(D_W_original[1] < D_W_bootstrap[1,])
+p_values_w <- mean(D_W_original[2] < D_W_bootstrap[2,])
+print(p_values_d)
+print(p_values_w)
+```
