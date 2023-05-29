@@ -12,19 +12,19 @@ set.seed(123)
 ```
 
 ## Exercise 5.1
-Simulate observations $(Y_i, x_i)_{1\leq n}$, with $n = 50$, according to the model
+*Simulate observations $(Y_i, x_i)_{1\leq n}$, with $n = 50$, according to the model
 $$Y_i = x_i \beta + \epsilon_i, x_i = \frac{i}{n},$$
-where $\epsilon_1, \ldots, \epsilon_n\sim\mathscr{N}(0,\sigma^2)$ are iid., $\beta = 0.5$, and $\sigma^2 = 4$.
+where $\epsilon_1, \ldots, \epsilon_n\sim\mathscr{N}(0,\sigma^2)$ are iid., $\beta = 0.5$, and $\sigma^2 = 4$.*
 ```{r}
 n <- 50
-x <- (1:n) / n
+x <- as.matrix((1:n) / n)
 Y_i <- function(beta_1 = 0.5, mean_epsilon = 0, sigma_squared = 4, x) {
   n <- length(x)
   return(x * beta_1 + rnorm(n = n, mean = mean_epsilon, sd = sqrt(sigma_squared)))
 }
 y_i <- Y_i(x = x)
 ```
-(i) Use Theorem 5.2.2 to construct an approximative ci. for $\beta$ to the level 0.1.
+*(i) Use Theorem 5.2.2 to construct an approximative ci. for $\beta$ to the level 0.1.*
 
 
 According to formula (5.1):
@@ -51,42 +51,74 @@ t_522 <- theorem_522(x = x, Y_i = y_i, alpha = 0.1)
 cat('Intervall is :[', t_522[1], ',', t_522[2], ']')
 beta_hat <- matrix(t_522[3])
 ```
-(ii) Use Theorem 5.3.3 with 1000 bootstrap replications to construct an approximative ci. to the level 0.1.
+*(ii) Use Theorem 5.3.3 with 1000 bootstrap replications to construct an approximative ci. to the level 0.1.*
 
 According to Resampling Scheme 5.1:
 
 - (A) computed in (i)
-- (B)
-$$ \hat{\epsilon}=y-x\hat{\beta} $$
-$$ \mu_n = n^{-1}\sum_{i=1}^{n}\hat{\epsilon}_i $$
-$$ \tilde{\epsilon} = \hat{\epsilon} - \mu_n $$
-- (C)
-$$ Y_i^* = x^t \hat{\beta} + \epsilon^* $$
-- (D) LSE:
-$$ \beta^* = (x^t x)^{-1} x^t Y^* $$
+- (B) $\hat{\epsilon} = y-x\hat{\beta}$, $\quad$ $\mu_n = n^{-1}\sum\limits_{i=1}^{n}\hat{\epsilon}_i$, $\quad$ $\tilde{\epsilon} = \hat{\epsilon} - \mu_n$
+- (C) $Y_i^* = x^t \hat{\beta} + \epsilon^*$
+- (D) LSE: $\beta^* = (x^t x)^{-1} x^t Y^*$
 ```{r}
-resampling_51 <- function(Y_i, x, beta_hat) {
+resampling_51_helper <- function(x, F, beta_hat, alpha) {
+  n <- length(x)
+  epsilon_star <- matrix(F(rnorm(n = n, mean = 0, sd = 1)))
+  V_minus1 <- solve((1 / n) * t(epsilon_star) %*% epsilon_star)
+  # x transponiert funktioniert nicht!
+  Y_star <- x %*% beta_hat + epsilon_star
+  beta_star <- solve(t(x) %*% x) %*% t(x) %*% Y_star
+  s_n_squared <- (t(Y_star - x %*% beta_star) %*% (Y_star - x %*% beta_star)) / n
+  alpha_qantile <- qnorm(1 - alpha / 2)
+  left <- beta_star - alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
+  right <- beta_star + alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
+  return(c(left, right, beta_star))
+}
+
+resampling_51 <- function(x, Y_i, beta_hat, num_it) {
   n <- length(x)
   epsilon_hat <- Y_i - (x %*% beta_hat)
   epsilon_tilde <- epsilon_hat - mean(epsilon_hat)
   F <- ecdf(epsilon_tilde)
-  epsilon_star <- F(rnorm(n = n, mean = 0, sd = 1))
-  # skalare Multiplikation, weil die Matrix-Matrix-Multiplikation mit 50x1 * 1x1 nicht funktioniert hat
-  Y_star <- t(x) * beta_hat[1,1] + epsilon_star
-  # Y_star transponiert, weil wegen der Rechnung oben die falsche Dimension rauskommt.
-  beta_star <- solve(t(x) %*% x) %*% t(x) %*% t(Y_star)
-  return(beta_star)
+  return(apply(replicate(n = num_it, expr = resampling_51_helper(x = x, F = F, beta_hat = beta_hat, alpha = 0.1)), 1, mean))
 }
-r_51 <- resampling_51(y_i, x = x, beta_hat = beta_hat)
-cat('beta_star:', r_51)
 ```
 
-(iii) Repeat the steps (i) and (ii) 100 times. Determine the mean interval widths for the 100 intervals based on normal approximation and for the 100 intervals based on bootstrap approximation. Furthermore, obtain the coverage levels corresponding to the two approximations.
+*(iii) Repeat the steps (i) and (ii) 100 times. Determine the mean interval widths for the 100 intervals based on normal approximation and for the 100 intervals based on bootstrap approximation. Furthermore, obtain the coverage levels corresponding to the two approximations.*
+
+```{r}
+num_it <- 100
+theorem_522_matrix <- replicate(n = num_it, expr = theorem_522(x = x, Y_i = Y_i(x = x), alpha = 0.1))
+theorem_522_means <- apply(theorem_522_matrix, 1, mean)
+theorem_522_intervall_widths <- abs(theorem_522_matrix[1,] - theorem_522_matrix[2,])
+cat('For Theorem 5.2.2 with', num_it, 'iterations the mean intervall is: [', theorem_522_means[1], ',', theorem_522_means[2], '], with mean beta_hat:', theorem_522_means[3], 'and mean intervall width:', mean(theorem_522_intervall_widths), '.')
+
+resampling_51_matrix <- replicate(n = num_it, expr = resampling_51(x = x, Y_i = Y_i(x = x), beta_hat = beta_hat, num_it = 1000))
+resampling_51_means <- apply(resampling_51_matrix, 1, mean)
+resampling_51_intervall_widths <- abs(resampling_51_matrix[1,] - resampling_51_matrix[2,])
+cat('For Resampling Scheme 5.1 with', num_it, 'iterations the mean intervall is: [', resampling_51_means[1], ',', resampling_51_means[2], '], with mean beta_hat:', resampling_51_means[3], 'and mean intervall width:', mean(resampling_51_intervall_widths), '.')
+```
+**Der Wert des Bootstrap-Tests für $\hat{\beta}$ kommt uns unrealistisch vor, daher macht die nächste Aufgabe leider wenig Sinn für uns.**
 
 ## Exercise 5.2.
 Take the model given under Exercise 5.1.
 
 - (i) Use Theorem 5.3.3 to construct a bootstrap based test for $H_0:\beta = 0.4$ against $H_1:\beta > 0.4$ and determine the approximative p-value based on 1000 bootstrap replications.
+
+```{r}
+resampling_51_v2 <- function(x, Y_i, beta_hat, num_it) {
+  n <- length(x)
+  epsilon_hat <- Y_i - (x %*% beta_hat)
+  epsilon_tilde <- epsilon_hat - mean(epsilon_hat)
+  F <- ecdf(epsilon_tilde)
+  return(replicate(n = num_it, expr = resampling_51_helper(x = x, F = F, beta_hat = beta_hat, alpha = 0.1)))
+}
+test <- function(num_it, x, Y_i, beta) {
+  betas <- resampling_51_v2(x = x, Y_i = y_i, beta_hat = beta_hat, num_it = num_it)[3]
+  return(mean(betas <= beta))
+}
+
+cat('Count of H_0:', test(num_it = 1000, x = x, Y_i = y_i, beta = 0.4))
+```
 
 - (ii) Repeat the generation of the observations according to the model 100 times and
 use the bootstrap test developed under (i) for each data set to calculate the

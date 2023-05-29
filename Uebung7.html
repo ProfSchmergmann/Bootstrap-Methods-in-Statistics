@@ -360,21 +360,19 @@ display: none;
 <pre class="r"><code>set.seed(123)</code></pre>
 <div id="exercise-5.1" class="section level2">
 <h2>Exercise 5.1</h2>
-<p>Simulate observations <span class="math inline">\((Y_i, x_i)_{1\leq
-n}\)</span>, with <span class="math inline">\(n = 50\)</span>, according
-to the model <span class="math display">\[Y_i = x_i \beta + \epsilon_i,
-x_i = \frac{i}{n},\]</span> where <span class="math inline">\(\epsilon_1, \ldots,
-\epsilon_n\sim\mathscr{N}(0,\sigma^2)\)</span> are iid., <span class="math inline">\(\beta = 0.5\)</span>, and <span class="math inline">\(\sigma^2 = 4\)</span>.</p>
+<p><em>Simulate observations <span class="math inline">\((Y_i,
+x_i)_{1\leq n}\)</span>, with <span class="math inline">\(n =
+50\)</span>, according to the model <span class="math display">\[Y_i =
+x_i \beta + \epsilon_i, x_i = \frac{i}{n},\]</span> where <span class="math inline">\(\epsilon_1, \ldots,
+\epsilon_n\sim\mathscr{N}(0,\sigma^2)\)</span> are iid., <span class="math inline">\(\beta = 0.5\)</span>, and <span class="math inline">\(\sigma^2 = 4\)</span>.</em></p>
 <pre class="r"><code>n &lt;- 50
-x &lt;- (1:n) / n
+x &lt;- as.matrix((1:n) / n)
 Y_i &lt;- function(beta_1 = 0.5, mean_epsilon = 0, sigma_squared = 4, x) {
   n &lt;- length(x)
   return(x * beta_1 + rnorm(n = n, mean = mean_epsilon, sd = sqrt(sigma_squared)))
 }
 y_i &lt;- Y_i(x = x)</code></pre>
-<ol style="list-style-type: lower-roman">
-<li>Use Theorem 5.2.2 to construct an approximative ci. for <span class="math inline">\(\beta\)</span> to the level 0.1.</li>
-</ol>
+<p><em>(i) Use Theorem 5.2.2 to construct an approximative ci. for <span class="math inline">\(\beta\)</span> to the level 0.1.</em></p>
 <p>According to formula (5.1): <span class="math display">\[
 \hat{\beta}=(x^t x)^{-1} x^t \cdot \epsilon \]</span> and Corollary
 5.2.4: <span class="math display">\[ s_n^2 = \frac{(y - x \hat{\beta})^t
@@ -397,51 +395,68 @@ t_522 &lt;- theorem_522(x = x, Y_i = y_i, alpha = 0.1)
 cat(&#39;Intervall is :[&#39;, t_522[1], &#39;,&#39;, t_522[2], &#39;]&#39;)</code></pre>
 <pre><code>## Intervall is :[ -0.1587428 , 1.297268 ]</code></pre>
 <pre class="r"><code>beta_hat &lt;- matrix(t_522[3])</code></pre>
-<ol start="2" style="list-style-type: lower-roman">
-<li>Use Theorem 5.3.3 with 1000 bootstrap replications to construct an
-approximative ci. to the level 0.1.</li>
-</ol>
+<p><em>(ii) Use Theorem 5.3.3 with 1000 bootstrap replications to
+construct an approximative ci. to the level 0.1.</em></p>
 <p>According to Resampling Scheme 5.1:</p>
 <ul>
 <li><ol style="list-style-type: upper-alpha">
 <li>computed in (i)</li>
 </ol></li>
 <li><ol start="2" style="list-style-type: upper-alpha">
-<li><span class="math display">\[ \hat{\epsilon}=y-x\hat{\beta}
-\]</span> <span class="math display">\[ \mu_n =
-n^{-1}\sum_{i=1}^{n}\hat{\epsilon}_i \]</span> <span class="math display">\[ \tilde{\epsilon} = \hat{\epsilon} - \mu_n
-\]</span></li>
+<li><span class="math inline">\(\hat{\epsilon} =
+y-x\hat{\beta}\)</span>, <span class="math inline">\(\quad\)</span>
+<span class="math inline">\(\mu_n =
+n^{-1}\sum\limits_{i=1}^{n}\hat{\epsilon}_i\)</span>, <span class="math inline">\(\quad\)</span> <span class="math inline">\(\tilde{\epsilon} = \hat{\epsilon} -
+\mu_n\)</span></li>
 </ol></li>
 <li><ol start="3" style="list-style-type: upper-alpha">
-<li><span class="math display">\[ Y_i^* = x^t \hat{\beta} + \epsilon^*
-\]</span></li>
+<li><span class="math inline">\(Y_i^* = x^t \hat{\beta} +
+\epsilon^*\)</span></li>
 </ol></li>
 <li><ol start="4" style="list-style-type: upper-alpha">
-<li>LSE: <span class="math display">\[ \beta^* = (x^t x)^{-1} x^t Y^*
-\]</span></li>
+<li>LSE: <span class="math inline">\(\beta^* = (x^t x)^{-1} x^t
+Y^*\)</span></li>
 </ol></li>
 </ul>
-<pre class="r"><code>resampling_51 &lt;- function(Y_i, x, beta_hat) {
+<pre class="r"><code>resampling_51_helper &lt;- function(x, F, beta_hat, alpha) {
+  n &lt;- length(x)
+  epsilon_star &lt;- matrix(F(rnorm(n = n, mean = 0, sd = 1)))
+  V_minus1 &lt;- solve((1 / n) * t(epsilon_star) %*% epsilon_star)
+  # x transponiert funktioniert nicht!
+  Y_star &lt;- x %*% beta_hat + epsilon_star
+  beta_star &lt;- solve(t(x) %*% x) %*% t(x) %*% Y_star
+  s_n_squared &lt;- (t(Y_star - x %*% beta_star) %*% (Y_star - x %*% beta_star)) / n
+  alpha_qantile &lt;- qnorm(1 - alpha / 2)
+  left &lt;- beta_star - alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
+  right &lt;- beta_star + alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
+  return(c(left, right, beta_star))
+}
+
+resampling_51 &lt;- function(x, Y_i, beta_hat, num_it) {
   n &lt;- length(x)
   epsilon_hat &lt;- Y_i - (x %*% beta_hat)
   epsilon_tilde &lt;- epsilon_hat - mean(epsilon_hat)
   F &lt;- ecdf(epsilon_tilde)
-  epsilon_star &lt;- F(rnorm(n = n, mean = 0, sd = 1))
-  # skalare Multiplikation, weil die Matrix-Matrix-Multiplikation mit 50x1 * 1x1 nicht funktioniert hat
-  Y_star &lt;- t(x) * beta_hat[1,1] + epsilon_star
-  # Y_star transponiert, weil wegen der Rechnung oben die falsche Dimension rauskommt.
-  beta_star &lt;- solve(t(x) %*% x) %*% t(x) %*% t(Y_star)
-  return(beta_star)
-}
-r_51 &lt;- resampling_51(y_i, x = x, beta_hat = beta_hat)
-cat(&#39;beta_star:&#39;, r_51)</code></pre>
-<pre><code>## beta_star: 1.396822</code></pre>
-<ol start="3" style="list-style-type: lower-roman">
-<li>Repeat the steps (i) and (ii) 100 times. Determine the mean interval
-widths for the 100 intervals based on normal approximation and for the
-100 intervals based on bootstrap approximation. Furthermore, obtain the
-coverage levels corresponding to the two approximations.</li>
-</ol>
+  return(apply(replicate(n = num_it, expr = resampling_51_helper(x = x, F = F, beta_hat = beta_hat, alpha = 0.1)), 1, mean))
+}</code></pre>
+<p><em>(iii) Repeat the steps (i) and (ii) 100 times. Determine the mean
+interval widths for the 100 intervals based on normal approximation and
+for the 100 intervals based on bootstrap approximation. Furthermore,
+obtain the coverage levels corresponding to the two
+approximations.</em></p>
+<pre class="r"><code>num_it &lt;- 100
+theorem_522_matrix &lt;- replicate(n = num_it, expr = theorem_522(x = x, Y_i = Y_i(x = x), alpha = 0.1))
+theorem_522_means &lt;- apply(theorem_522_matrix, 1, mean)
+theorem_522_intervall_widths &lt;- abs(theorem_522_matrix[1,] - theorem_522_matrix[2,])
+cat(&#39;For Theorem 5.2.2 with&#39;, num_it, &#39;iterations the mean intervall is: [&#39;, theorem_522_means[1], &#39;,&#39;, theorem_522_means[2], &#39;], with mean beta_hat:&#39;, theorem_522_means[3], &#39;and mean intervall width:&#39;, mean(theorem_522_intervall_widths), &#39;.&#39;)</code></pre>
+<pre><code>## For Theorem 5.2.2 with 100 iterations the mean intervall is: [ -0.3120505 , 1.245095 ], with mean beta_hat: 0.4665224 and mean intervall width: 1.557146 .</code></pre>
+<pre class="r"><code>resampling_51_matrix &lt;- replicate(n = num_it, expr = resampling_51(x = x, Y_i = Y_i(x = x), beta_hat = beta_hat, num_it = 1000))
+resampling_51_means &lt;- apply(resampling_51_matrix, 1, mean)
+resampling_51_intervall_widths &lt;- abs(resampling_51_matrix[1,] - resampling_51_matrix[2,])
+cat(&#39;For Resampling Scheme 5.1 with&#39;, num_it, &#39;iterations the mean intervall is: [&#39;, resampling_51_means[1], &#39;,&#39;, resampling_51_means[2], &#39;], with mean beta_hat:&#39;, resampling_51_means[3], &#39;and mean intervall width:&#39;, mean(resampling_51_intervall_widths), &#39;.&#39;)</code></pre>
+<pre><code>## For Resampling Scheme 5.1 with 100 iterations the mean intervall is: [ 1.17836 , 1.445832 ], with mean beta_hat: 1.312096 and mean intervall width: 0.2674726 .</code></pre>
+<p><strong>Der Wert des Bootstrap-Tests für <span class="math inline">\(\hat{\beta}\)</span> kommt uns unrealistisch vor,
+daher macht die nächste Aufgabe leider wenig Sinn für uns.</strong></p>
 </div>
 <div id="exercise-5.2." class="section level2">
 <h2>Exercise 5.2.</h2>
@@ -451,6 +466,22 @@ coverage levels corresponding to the two approximations.</li>
 <li>Use Theorem 5.3.3 to construct a bootstrap based test for <span class="math inline">\(H_0:\beta = 0.4\)</span> against <span class="math inline">\(H_1:\beta &gt; 0.4\)</span> and determine the
 approximative p-value based on 1000 bootstrap replications.</li>
 </ol></li>
+</ul>
+<pre class="r"><code>resampling_51_v2 &lt;- function(x, Y_i, beta_hat, num_it) {
+  n &lt;- length(x)
+  epsilon_hat &lt;- Y_i - (x %*% beta_hat)
+  epsilon_tilde &lt;- epsilon_hat - mean(epsilon_hat)
+  F &lt;- ecdf(epsilon_tilde)
+  return(replicate(n = num_it, expr = resampling_51_helper(x = x, F = F, beta_hat = beta_hat, alpha = 0.1)))
+}
+test &lt;- function(num_it, x, Y_i, beta) {
+  betas &lt;- resampling_51_v2(x = x, Y_i = y_i, beta_hat = beta_hat, num_it = num_it)[3]
+  return(mean(betas &lt;= beta))
+}
+
+cat(&#39;Count of H_0:&#39;, test(num_it = 1000, x = x, Y_i = y_i, beta = 0.4))</code></pre>
+<pre><code>## Count of H_0: 0</code></pre>
+<ul>
 <li><ol start="2" style="list-style-type: lower-roman">
 <li>Repeat the generation of the observations according to the model 100
 times and use the bootstrap test developed under (i) for each data set
