@@ -7,6 +7,10 @@ html_document:
 df_print: paged
 ---
 
+```{r}
+set.seed(123)
+```
+
 ## Exercise 5.1
 Simulate observations $(Y_i, x_i)_{1\leq n}$, with $n = 50$, according to the model
 $$Y_i = x_i \beta + \epsilon_i, x_i = \frac{i}{n},$$
@@ -21,31 +25,60 @@ Y_i <- function(beta_1 = 0.5, mean_epsilon = 0, sigma_squared = 4, x) {
 y_i <- Y_i(x = x)
 ```
 (i) Use Theorem 5.2.2 to construct an approximative ci. for $\beta$ to the level 0.1.
+
+
+According to formula (5.1):
+$$ \hat{\beta}=(x^t x)^{-1} x^t \cdot \epsilon $$
+and Corollary 5.2.4:
+$$ s_n^2 = \frac{(y - x \hat{\beta})^t \cdot (y - x \hat{\beta})}{n} $$
+and Lemma 5.2.1 (ii):
+$$ V^{-1} = (n^{-1} x^t x)^{-1} $$
+is the confidence intervall:
+$$ \hat{\beta} \pm q_{1-\frac{\alpha}{2}} * \sqrt{\frac{s_n^2 \cdot V^{-1}}{n}} $$
 ```{r}
 theorem_522 <- function(x, Y_i, alpha) {
   n <- length(Y_i)
   V_minus1 <- solve((1 / n) * t(x) %*% x)
-
   # beta_hat <- lm(formula = Y_i~x-1)$coefficients
   beta_hat <- solve(t(x) %*% x) %*% t(x) %*% Y_i
-
   s_n_squared <- (t(Y_i - x %*% beta_hat) %*% (Y_i - x %*% beta_hat)) / n
   alpha_qantile <- qnorm(1 - alpha / 2)
   left <- beta_hat - alpha_qantile * sqrt((s_n_squared * V_minus1) / n)
   right <- beta_hat + alpha_qantile * sqrt((s_n_squared * V_minus1) / n)
   return(c(left, right, beta_hat))
 }
-print(theorem_522(x = x, Y_i = y_i, alpha = 0.1))
+t_522 <- theorem_522(x = x, Y_i = y_i, alpha = 0.1)
+cat('Intervall is :[', t_522[1], ',', t_522[2], ']')
+beta_hat <- matrix(t_522[3])
 ```
 (ii) Use Theorem 5.3.3 with 1000 bootstrap replications to construct an approximative ci. to the level 0.1.
+
+According to Resampling Scheme 5.1:
+
+- (A) computed in (i)
+- (B)
+$$ \hat{\epsilon}=y-x\hat{\beta} $$
+$$ \mu_n = n^{-1}\sum_{i=1}^{n}\hat{\epsilon}_i $$
+$$ \tilde{\epsilon} = \hat{\epsilon} - \mu_n $$
+- (C)
+$$ Y_i^* = x^t \hat{\beta} + \epsilon^* $$
+- (D) LSE:
+$$ \beta^* = (x^t x)^{-1} x^t Y^* $$
 ```{r}
-resampling_51 <- function (Y_i, x, beta_hat){
-  epsilon_hat <- Y_i - x %*% beta_hat
+resampling_51 <- function(Y_i, x, beta_hat) {
+  n <- length(x)
+  epsilon_hat <- Y_i - (x %*% beta_hat)
   epsilon_tilde <- epsilon_hat - mean(epsilon_hat)
   F <- ecdf(epsilon_tilde)
-  F()
-  Y_star <- t(x) %*% beta_hat + eps
+  epsilon_star <- F(rnorm(n = n, mean = 0, sd = 1))
+  # skalare Multiplikation, weil die Matrix-Matrix-Multiplikation mit 50x1 * 1x1 nicht funktioniert hat
+  Y_star <- t(x) * beta_hat[1,1] + epsilon_star
+  # Y_star transponiert, weil wegen der Rechnung oben die falsche Dimension rauskommt.
+  beta_star <- solve(t(x) %*% x) %*% t(x) %*% t(Y_star)
+  return(beta_star)
 }
+r_51 <- resampling_51(y_i, x = x, beta_hat = beta_hat)
+cat('beta_star:', r_51)
 ```
 
 (iii) Repeat the steps (i) and (ii) 100 times. Determine the mean interval widths for the 100 intervals based on normal approximation and for the 100 intervals based on bootstrap approximation. Furthermore, obtain the coverage levels corresponding to the two approximations.
@@ -53,9 +86,7 @@ resampling_51 <- function (Y_i, x, beta_hat){
 ## Exercise 5.2.
 Take the model given under Exercise 5.1.
 
-- (i) Use Theorem 5.3.3 to construct a bootstrap based test for
-H0 :   = 0:4 against H1 :   > 0:4
-and determine the approximative p-value based on 1000 bootstrap replications.
+- (i) Use Theorem 5.3.3 to construct a bootstrap based test for $H_0:\beta = 0.4$ against $H_1:\beta > 0.4$ and determine the approximative p-value based on 1000 bootstrap replications.
 
 - (ii) Repeat the generation of the observations according to the model 100 times and
 use the bootstrap test developed under (i) for each data set to calculate the

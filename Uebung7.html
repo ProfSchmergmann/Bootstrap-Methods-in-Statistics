@@ -11,7 +11,7 @@
 
 <meta name="author" content="Sven Bergmann, Malte Lennartz" />
 
-<meta name="date" content="2023-05-24" />
+<meta name="date" content="2023-05-29" />
 
 <title>boot_uebung7_team1</title>
 
@@ -352,11 +352,12 @@ display: none;
 
 <h1 class="title toc-ignore">boot_uebung7_team1</h1>
 <h4 class="author">Sven Bergmann, Malte Lennartz</h4>
-<h4 class="date">2023-05-24</h4>
+<h4 class="date">2023-05-29</h4>
 
 </div>
 
 
+<pre class="r"><code>set.seed(123)</code></pre>
 <div id="exercise-5.1" class="section level2">
 <h2>Exercise 5.1</h2>
 <p>Simulate observations <span class="math inline">\((Y_i, x_i)_{1\leq
@@ -374,32 +375,67 @@ y_i &lt;- Y_i(x = x)</code></pre>
 <ol style="list-style-type: lower-roman">
 <li>Use Theorem 5.2.2 to construct an approximative ci. for <span class="math inline">\(\beta\)</span> to the level 0.1.</li>
 </ol>
+<p>According to formula (5.1): <span class="math display">\[
+\hat{\beta}=(x^t x)^{-1} x^t \cdot \epsilon \]</span> and Corollary
+5.2.4: <span class="math display">\[ s_n^2 = \frac{(y - x \hat{\beta})^t
+\cdot (y - x \hat{\beta})}{n} \]</span> and Lemma 5.2.1 (ii): <span class="math display">\[ V^{-1} = (n^{-1} x^t x)^{-1} \]</span> is the
+confidence intervall: <span class="math display">\[ \hat{\beta} \pm
+q_{1-\frac{\alpha}{2}} * \sqrt{\frac{s_n^2 \cdot V^{-1}}{n}}
+\]</span></p>
 <pre class="r"><code>theorem_522 &lt;- function(x, Y_i, alpha) {
   n &lt;- length(Y_i)
   V_minus1 &lt;- solve((1 / n) * t(x) %*% x)
-
   # beta_hat &lt;- lm(formula = Y_i~x-1)$coefficients
   beta_hat &lt;- solve(t(x) %*% x) %*% t(x) %*% Y_i
-
   s_n_squared &lt;- (t(Y_i - x %*% beta_hat) %*% (Y_i - x %*% beta_hat)) / n
   alpha_qantile &lt;- qnorm(1 - alpha / 2)
   left &lt;- beta_hat - alpha_qantile * sqrt((s_n_squared * V_minus1) / n)
   right &lt;- beta_hat + alpha_qantile * sqrt((s_n_squared * V_minus1) / n)
   return(c(left, right, beta_hat))
 }
-print(theorem_522(x = x, Y_i = y_i, alpha = 0.1))</code></pre>
-<pre><code>## [1] -0.5703010  0.9909009  0.2103000</code></pre>
+t_522 &lt;- theorem_522(x = x, Y_i = y_i, alpha = 0.1)
+cat(&#39;Intervall is :[&#39;, t_522[1], &#39;,&#39;, t_522[2], &#39;]&#39;)</code></pre>
+<pre><code>## Intervall is :[ -0.1587428 , 1.297268 ]</code></pre>
+<pre class="r"><code>beta_hat &lt;- matrix(t_522[3])</code></pre>
 <ol start="2" style="list-style-type: lower-roman">
 <li>Use Theorem 5.3.3 with 1000 bootstrap replications to construct an
 approximative ci. to the level 0.1.</li>
 </ol>
-<pre class="r"><code>resampling_51 &lt;- function (Y_i, x, beta_hat){
-  epsilon_hat &lt;- Y_i - x %*% beta_hat
+<p>According to Resampling Scheme 5.1:</p>
+<ul>
+<li><ol style="list-style-type: upper-alpha">
+<li>computed in (i)</li>
+</ol></li>
+<li><ol start="2" style="list-style-type: upper-alpha">
+<li><span class="math display">\[ \hat{\epsilon}=y-x\hat{\beta}
+\]</span> <span class="math display">\[ \mu_n =
+n^{-1}\sum_{i=1}^{n}\hat{\epsilon}_i \]</span> <span class="math display">\[ \tilde{\epsilon} = \hat{\epsilon} - \mu_n
+\]</span></li>
+</ol></li>
+<li><ol start="3" style="list-style-type: upper-alpha">
+<li><span class="math display">\[ Y_i^* = x^t \hat{\beta} + \epsilon^*
+\]</span></li>
+</ol></li>
+<li><ol start="4" style="list-style-type: upper-alpha">
+<li>LSE: <span class="math display">\[ \beta^* = (x^t x)^{-1} x^t Y^*
+\]</span></li>
+</ol></li>
+</ul>
+<pre class="r"><code>resampling_51 &lt;- function(Y_i, x, beta_hat) {
+  n &lt;- length(x)
+  epsilon_hat &lt;- Y_i - (x %*% beta_hat)
   epsilon_tilde &lt;- epsilon_hat - mean(epsilon_hat)
   F &lt;- ecdf(epsilon_tilde)
-  F()
-  Y_star &lt;- t(x) %*% beta_hat + eps
-}</code></pre>
+  epsilon_star &lt;- F(rnorm(n = n, mean = 0, sd = 1))
+  # skalare Multiplikation, weil die Matrix-Matrix-Multiplikation mit 50x1 * 1x1 nicht funktioniert hat
+  Y_star &lt;- t(x) * beta_hat[1,1] + epsilon_star
+  # Y_star transponiert, weil wegen der Rechnung oben die falsche Dimension rauskommt.
+  beta_star &lt;- solve(t(x) %*% x) %*% t(x) %*% t(Y_star)
+  return(beta_star)
+}
+r_51 &lt;- resampling_51(y_i, x = x, beta_hat = beta_hat)
+cat(&#39;beta_star:&#39;, r_51)</code></pre>
+<pre><code>## beta_star: 1.396822</code></pre>
 <ol start="3" style="list-style-type: lower-roman">
 <li>Repeat the steps (i) and (ii) 100 times. Determine the mean interval
 widths for the 100 intervals based on normal approximation and for the
@@ -412,9 +448,8 @@ coverage levels corresponding to the two approximations.</li>
 <p>Take the model given under Exercise 5.1.</p>
 <ul>
 <li><ol style="list-style-type: lower-roman">
-<li>Use Theorem 5.3.3 to construct a bootstrap based test for H0 : = 0:4
-against H1 : &gt; 0:4 and determine the approximative p-value based on
-1000 bootstrap replications.</li>
+<li>Use Theorem 5.3.3 to construct a bootstrap based test for <span class="math inline">\(H_0:\beta = 0.4\)</span> against <span class="math inline">\(H_1:\beta &gt; 0.4\)</span> and determine the
+approximative p-value based on 1000 bootstrap replications.</li>
 </ol></li>
 <li><ol start="2" style="list-style-type: lower-roman">
 <li>Repeat the generation of the observations according to the model 100
