@@ -10,9 +10,8 @@ ergebnisse <- c(2.2869, 2.2884, 2.2842, 2.2859, 2.2843, 2.2850, 2.2871, 2.2856, 
 sigma_0 <- 0.009
 mu <- 2.2858
 alpha <- 0.025
-testgroesse <- sum(((ergebnisse - mu) / sigma_0)^2)
+testgroesse <- sum(((ergebnisse - mu)^2 / sigma_0^2))
 print(testgroesse)
-q_1_minus_alpha <- qchisq(p = 1 - alpha, df = 1, n = 12)
+q_1_minus_alpha <- qchisq(p = 1 - alpha, df = 12)
 print(q_1_minus_alpha)
-chisq.test(ergebnisse, rnorm(n = 12, mean = mu, sd = 0.009))
 ```
