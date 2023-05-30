@@ -1,0 +1,18 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1. Ein Hersteller von Feinwaagen behauptet, dass bei seinen Waagen die Standardabweichung der Meßergebnisse höchstens gleich $\sigma_0 = 0.009N$ ist. Nehmen Sie an, dass die unten genannten Ergebnisse (in N) von 12 Wägungen einer Substanz sich als Beobachtungen von 12 unabhängigen $\mathscr{N}(\mu, \sigma^2)$-verteilten Zufallsvariablen mit $\mu = 2.2858$ auffassen lassen. Prüfen Sie mit einem geeigneten statistischen Test zum Testniveau $\alpha = 0.025$, ob die Hypothese $\sigma\leq\sigma_0$ mit den genannten Ergebnissen vereinbar ist.
+2.2869 2.2884 2.2842 2.2859 2.2843 2.2850 2.2871 2.2856 2.2853 2.2861 2.2845 2.2855
+```{r}
+ergebnisse <- c(2.2869, 2.2884, 2.2842, 2.2859, 2.2843, 2.2850, 2.2871, 2.2856, 2.2853, 2.2861, 2.2845, 2.2855)
+sigma_0 <- 0.009
+mu <- 2.2858
+alpha <- 0.025
+testgroesse <- sum(((ergebnisse - mu) / sigma_0)^2)
+print(testgroesse)
+q_1_minus_alpha <- qchisq(p = 1 - alpha, df = 1, n = 12)
+print(q_1_minus_alpha)
+chisq.test(ergebnisse, rnorm(n = 12, mean = mu, sd = 0.009))
+```
