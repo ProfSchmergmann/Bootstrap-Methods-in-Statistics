@@ -18,11 +18,12 @@ where $\epsilon_1, \ldots, \epsilon_n\sim\mathscr{N}(0,\sigma^2)$ are iid., $\be
 ```{r}
 n <- 50
 x <- as.matrix((1:n) / n)
+sigma_squared <- 4
 Y_i <- function(beta_1 = 0.5, mean_epsilon = 0, sigma_squared = 4, x) {
   n <- length(x)
   return(x * beta_1 + rnorm(n = n, mean = mean_epsilon, sd = sqrt(sigma_squared)))
 }
-y_i <- Y_i(x = x)
+y_i <- Y_i(x = x, sigma_squared = sigma_squared)
 ```
 *(i) Use Theorem 5.2.2 to construct an approximative ci. for $\beta$ to the level 0.1.*
 
@@ -60,14 +61,16 @@ According to Resampling Scheme 5.1:
 - (C) $Y_i^* = x^t \hat{\beta} + \epsilon^*$
 - (D) LSE: $\beta^* = (x^t x)^{-1} x^t Y^*$
 ```{r}
-resampling_51_helper <- function(x, F, beta_hat, alpha) {
+resampling_51_helper <- function(x, epsilon_tilde, beta_hat, alpha, num_it) {
   n <- length(x)
-  epsilon_star <- matrix(F(rnorm(n = n, mean = 0, sd = 1)))
-  V_minus1 <- solve((1 / n) * t(epsilon_star) %*% epsilon_star)
+  epsilon_star_matrix <- replicate(n = num_it, expr = sample(epsilon_tilde, replace = TRUE))
+  V_minus1 <- solve((1 / n) * t(x) %*% x)
   # x transponiert funktioniert nicht!
-  Y_star <- x %*% beta_hat + epsilon_star
-  beta_star <- solve(t(x) %*% x) %*% t(x) %*% Y_star
-  s_n_squared <- (t(Y_star - x %*% beta_star) %*% (Y_star - x %*% beta_star)) / n
+  Y_star_matrix <- apply(X = epsilon_star_matrix, MARGIN = 2, function(epsilon_star) x %*% beta_hat + epsilon_star)
+  x_inv_tps <- solve(t(x) %*% x) %*% t(x)
+  beta_star_matrix <- apply(X = Y_star_matrix, MARGIN = 2, function(Y_star) x_inv_tps %*% Y_star)
+  s_n_squared <- (t(Y_star_matrix - x %*% beta_star_matrix) %*% (Y_star_matrix - x %*% beta_star_matrix)) / n
+  value <- (sqrt(n) * beta_star_matrix - beta_hat) / sqrt(sigma_squared * V_minus1)
   alpha_qantile <- qnorm(1 - alpha / 2)
   left <- beta_star - alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
   right <- beta_star + alpha_qantile * sqrt((s_n_squared %*% V_minus1) / n)
@@ -78,8 +81,7 @@ resampling_51 <- function(x, Y_i, beta_hat, num_it) {
   n <- length(x)
   epsilon_hat <- Y_i - (x %*% beta_hat)
   epsilon_tilde <- epsilon_hat - mean(epsilon_hat)
-  F <- ecdf(epsilon_tilde)
-  return(apply(replicate(n = num_it, expr = resampling_51_helper(x = x, F = F, beta_hat = beta_hat, alpha = 0.1)), 1, mean))
+  return(apply(replicate(n = num_it, expr = resampling_51_helper(x = x, epsilon_tilde = epsilon_tilde, beta_hat = beta_hat, alpha = 0.1)), 1, mean))
 }
 ```
 
