@@ -1,0 +1,50 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## Aufgabe 1
+Eine Maschine produziert Schrauben, deren Durchmesser den Sollwert 3 mm haben. Kontrollmessungen bei $n = 20$ produzierten Schrauben lieferten die folgenden Abweichungen der Durchmesserwerte vom Sollwert (in mm):
+
+0.123 0.078 -0.042 -0.096 0.152 0.283 0.006 0.299 0.026 0.058 -0.084 -0.089 0.109 -0.172 -0.254 -0.289 0.204 -0.064 0.148 0.232
+
+Nehmen Sie an, dass diese Werte als Beobachtungen von unabhängigen Zufallsvariablen $X_1, \ldots, X_n$, je mit derselben $\mathcal{N}(\mu, \sigma^2)$-Verteilung mit unbekannten Parametern $\mu\in\mathbb{R}$ und $\sigma^2 > 0$ aufgefaßt werden können, und prüfen Sie mit einem geeigneten statistischen Test zum Testniveau $\alpha = 0.05$, ob die Beobachtungen mit der Hypothese $H : \mu = 0$ vereinbar sind.
+```{r}
+alpha <- 0.05
+messungen <- c(0.123, 0.078, -0.042, -0.096, 0.152, 0.283, 0.006, 0.299, 0.026, 0.058, -0.084, -0.089, 0.109, -0.172, -0.254, -0.289, 0.204, -0.064, 0.148, 0.232)
+n <- length(messungen)
+arithmetisches_mittel <- mean(messungen)
+teststatistik <- (sqrt(n) * arithmetisches_mittel) / sqrt(((1) / (n - 1)) * sum((messungen - arithmetisches_mittel)^2))
+t_n_minus_k <- qt(p = 1 - alpha / 2, df = n)
+h_0 <- teststatistik < t_n_minus_k
+cat('Die Hypothese H_0 kann', if (h_0) 'nicht', 'verworfen werden, da die Teststatistik T(X) =', teststatistik, if (h_0) 'kleiner' else 'groesser', 'als das 1-alpha Quantil der t-Verteilung =', t_n_minus_k, 'ist.')
+```
+## Aufgabe 2
+Zwei Verfahren zur Erhöhung der Festigkeit von Polyamidseide sollen auf ihre unterschiedliche Wirkung hin untersucht werden. Zu diesem Zweck wurden unabhängig voneinander für jedes Verfahren 10 bzw 7 unabhängige Festigkeitsmessungen durchgeführt. Dabei ergaben sich
+
+1.Verfahren: 0.121 0.105 0.114 0.130 0.119 0.142 0.106 0.107 0.131 0.108
+
+bzw.
+
+2.Verfahren: 0.102 0.103 0.099 0.118 0.113 0.081 0.117
+
+als Meßwerte (in N). Prüfen Sie die Hypothese, dass die beiden Verfahren hinsichtlich des Erwartungswertes der Festigkeit gleichwertig sind; das Testniveau sei $\alpha = 0.05$. Setzen Sie
+dabei voraus, dass die Messwerte aus normalverteilten Grundgesamtheiten mit gleichen Streuungen entstammen.
+```{r}
+messwerte_1 <- c(0.121, 0.105, 0.114, 0.130, 0.119, 0.142, 0.106, 0.107, 0.131, 0.108)
+n <- length(messwerte_1)
+arithmetisches_mittel_X <- mean(messwerte_1)
+stichprobenvarianz_X <- var(messwerte_1)
+messwerte_2 <- c(0.102, 0.103, 0.099, 0.118, 0.113, 0.081, 0.117)
+m <- length(messwerte_2)
+arithmetisches_mittel_Y <- mean(messwerte_2)
+stichprobenvarianz_Y <- var(messwerte_2)
+omega_0 <- 0
+gewichtete_varianz <- ((n - 1) * stichprobenvarianz_X + (m - 1) * stichprobenvarianz_Y) / (n + m - 2)
+teststatistik <- (sqrt((n * m) / n + m)) * ((arithmetisches_mittel_X -
+  arithmetisches_mittel_Y -
+  omega_0) / sqrt(gewichtete_varianz))
+t_m_plus_n_minus_2 <- qt(p = 1 - alpha / 2, df = n + m - 2)
+h_0 <- teststatistik < t_m_plus_n_minus_2
+cat('Die Hypothese H_0 kann', if (h_0) 'nicht', 'verworfen werden, da die Teststatistik T(X) =', teststatistik, if (h_0) 'kleiner' else 'groesser', 'als das 1-alpha Quantil der t-Verteilung =', t_m_plus_n_minus_2, 'ist.')
+```
