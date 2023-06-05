@@ -82,11 +82,15 @@ mean_st_b3 <- mean(stichprobe_b_3)
 
 mean_gesamt <- mean(c(stichprobe_b_1, stichprobe_b_2, stichprobe_b_3))
 
-teststatistik_zaehler <- ((1 / (s - 1)) * ((n_1 * (mean_gesamt - mean_st_b1)^2) +
-  (n_2 * (mean_gesamt - mean_st_b2)^2) +
-  (n_3 * (mean_gesamt - mean_st_b3)^2)))
+teststatistik_zaehler <- ((1 / (s - 1)) *
+  ((n_1 * (mean_gesamt - mean_st_b1)^2) +
+    (n_2 * (mean_gesamt - mean_st_b2)^2) +
+    (n_3 * (mean_gesamt - mean_st_b3)^2)))
 
-teststatistik_nenner <- 1
+teststatistik_nenner <- ((1 / (n - s)) *
+  sum((stichprobe_b_1 - mean_gesamt)^2) +
+  sum((stichprobe_b_2 - mean_gesamt)^2) +
+  sum((stichprobe_b_3 - mean_gesamt)^2))
 
 teststatistik <- teststatistik_zaehler / teststatistik_nenner
 
