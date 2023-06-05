@@ -48,3 +48,51 @@ t_m_plus_n_minus_2 <- qt(p = 1 - alpha / 2, df = n + m - 2)
 h_0 <- teststatistik < t_m_plus_n_minus_2
 cat('Die Hypothese H_0 kann', if (h_0) 'nicht', 'verworfen werden, da die Teststatistik T(X) =', teststatistik, if (h_0) 'kleiner' else 'groesser', 'als das 1-alpha Quantil der t-Verteilung =', t_m_plus_n_minus_2, 'ist.')
 ```
+## Aufgabe 3
+Auf einer Besamungsstation stehen drei Bullen $B_1, B_2, B_3$.
+Es soll mit Hilfe von $n_i$ Töchterleistungen $x_{ij}$ $(i = 1, 2, 3, j = 1, \ldots, n_i)$ geprüft werden, ob bezüglich der Milchfettmengenleistung Unterschiede in der Vererbungsleistung dieser Bullen bestehen.
+Es wird angenommen, dass die $x_{ij}$ ermittelte Werte von unabhängigen Zufallsvariablen $X_{ij}$ von der Form $X_{ij} = a_i +Z_{ij}$ sind, wobei die $Z_{ij}$ unabhängige $\mathcal{N}(0, \sigma^2)$-verteilte Zufallsvariablen sind und $a_1, a_2, a_3 \in\mathbb{R}$ sowie $\sigma^2 > 0$ unbekannt sind.
+
+|          | Bulle |       |       |
+|----------|-------|-------|-------|
+|          | $B_1$ | $B_2$ | $B_3$ |
+| $x_{ij}$ | 120   | 153   | 130   |
+|          | 155   | 144   | 138   |
+|          | 131   | 147   | 122   |
+|          | 130   |       |       |
+| $n_i$    | 4     | 3     | 3     |
+
+Prüfen Sie mit einem statistischen Test, dessen Wahrscheinlichkeit für einen Fehler 1. Art gleich 0.05 ist, ob die Milchfettmengenleistungen der Töchter gleich sind.
+```{r}
+alpha <- 0.05
+s <- 3
+
+stichprobe_b_1 <- c(120, 155, 131, 130)
+stichprobe_b_2 <- c(153, 144, 147)
+stichprobe_b_3 <- c(130, 138, 122)
+
+n_1 <- length(stichprobe_b_1)
+n_2 <- length(stichprobe_b_2)
+n_3 <- length(stichprobe_b_3)
+n <- n_1 + n_2 + n_3
+
+mean_st_b1 <- mean(stichprobe_b_1)
+mean_st_b2 <- mean(stichprobe_b_2)
+mean_st_b3 <- mean(stichprobe_b_3)
+
+mean_gesamt <- mean(c(stichprobe_b_1, stichprobe_b_2, stichprobe_b_3))
+
+teststatistik_zaehler <- ((1 / (s - 1)) * ((n_1 * (mean_gesamt - mean_st_b1)^2) +
+  (n_2 * (mean_gesamt - mean_st_b2)^2) +
+  (n_3 * (mean_gesamt - mean_st_b3)^2)))
+
+teststatistik_nenner <- 1
+
+teststatistik <- teststatistik_zaehler / teststatistik_nenner
+
+f_quantil <- qf(p = 1 - alpha, df1 = s - 1, df2 = n - 1)
+
+h_0 <- teststatistik < f_quantil
+
+cat('Die Hypothese H_0 kann', if (h_0) 'nicht', 'verworfen werden, da die Teststatistik T(X) =', teststatistik, if (h_0) 'kleiner' else 'groesser', 'als das 1-alpha Quantil der F-Verteilung =', f_quantil, 'ist.')
+```
