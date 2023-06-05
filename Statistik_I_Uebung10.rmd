@@ -1,6 +1,7 @@
 ---
-title: "R Notebook"
+title: "Mathematische Statistik I Übung 10"
 output: html_notebook
+author: Sven Bergmann
 ---
 
 ## Aufgabe 1
