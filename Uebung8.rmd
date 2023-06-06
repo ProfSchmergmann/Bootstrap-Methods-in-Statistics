@@ -1,0 +1,138 @@
+---
+title: "boot_uebung8_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+### Exercise 6.1.
+Repeat exercise 5.3 but now with the resampling scheme given under 6.1 and compare the results.
+
+#### Exercise 5.3.
+Use the model
+$$Y_i = x_i \beta + \epsilon_i, x_i = \frac{i}{n},$$
+where $\epsilon_1 = x_1\delta_1, \ldots, \epsilon_n = x_n \delta_n$ and $\delta_1, \ldots, \delta_n \sim \mathcal{N}(0,\sigma^2)$ are iid., $\beta = 0.5$ and $\sigma^2 = 4$.
+Note, in this case the error terms in the model, i.e. $\epsilon_i$, are not homoscedastic anymore!
+Repeat the simulation studies of Exercises 5.1 and 5.2 with this model.
+```{r}
+n <- 100
+sigma2 <- 4
+beta <- 0.5
+X <- seq(1, n, 1) / n
+eps <- rnorm(n, 0, sqrt(sigma2))
+Y <- beta * X + eps
+```
+```{r}
+ci_boot <- function(X, Y, alpha = 0.1, m = 1000) {
+  n <- length(Y)
+  model <- lm(Y ~ X - 1)
+  beta_hat <- model$coefficients
+
+  X_boot <- replicate(n = m, expr = sample(x = X, size = n, replace = TRUE))
+
+  Y_boot <- X_boot * beta_hat
+
+  beta_hat_boot <- apply(Y_boot, 2, function(y) lm(y ~ X - 1)$coefficients)
+
+  # epsilon_boot <- Y_boot - t(X_boot) * beta
+
+  Sigma <- (1 / n) * t(X) %*% X
+
+  # Wir wissen nicht, wie wir M berechnen sollen, daher die Einheitsmatrix.
+  M <- diag(length(Sigma))
+
+  t_boot <- sqrt(n) * (beta_hat_boot - beta_hat) /
+    sqrt(solve(Sigma) %*% M %*% solve(Sigma))
+
+  quantiles <- quantile(t_boot, c(alpha / 2, 1 - alpha / 2))
+  right_boot <- beta_hat - sqrt(solve(Sigma) %*% M %*% solve(Sigma) * (1 / n)) * quantiles[1]
+  left_boot <- beta_hat - sqrt(solve(Sigma) %*% M %*% solve(Sigma) * (1 / n)) * quantiles[2]
+  return(c(ci.left.boot = left_boot, ci.right.boot = right_boot))
+}
+```
+```{r}
+suppressWarnings({
+  cis <- ci_boot(X, Y, alpha = 0.1, m = 100)
+  sprintf("[%.3f, %.3f]", cis[1], cis[2])
+})
+```
+```{r}
+ci <- function(X, Y, alpha) {
+  n <- length(Y)
+  model <- lm(Y ~ X - 1)
+  beta_hat <- model$coefficients
+  V <- (1 / n * (t(X) %*% X))
+  res <- model$residuals
+  sigma2_hat <- var(res)
+  right <- beta_hat - sqrt(solve(V) * sigma2_hat / n) * qnorm(alpha / 2)
+  left <- beta_hat - sqrt(solve(V) * sigma2_hat / n) * qnorm(1 - alpha / 2)
+  return(c(ci.left = left, ci.right = right))
+}
+```
+```{r}
+simulate_ci <- function(X, beta, sigma2, alpha, m) {
+  n <- length(X)
+  eps <- rnorm(n, 0, sqrt(sigma2))
+  Y <- beta * X + eps
+  cis <- ci(X, Y, alpha)
+  cis_boot <- ci_boot(X, Y, alpha, m)
+  return(c(cis, cis_boot))
+}
+```
+```{r}
+suppressWarnings({
+  set.seed(123)
+  rep <- 100
+  alpha <- 0.1
+  m <- 1000
+  sim <- replicate(rep, simulate_ci(X, beta, sigma2, alpha, m))
+  ci_mean <- mean(sim[2,] - sim[1,])
+  ci_mean_boot <- mean(sim[4,] - sim[3,])
+  p_ci <- mean(sim[1,] < sim[3,] & sim[2,] > sim[4,])
+  p_beta <- mean(sim[1,] < beta & beta < sim[2,])
+  p_beta_boot <- mean(sim[3,] < beta & beta < sim[4,])
+  cat('ci_mean', ci_mean, '\n')
+  cat('ci_mean_boot', ci_mean_boot, '\n')
+  cat('p_ci', p_ci, '\n')
+  cat('p_beta', p_beta, '\n')
+  cat('p_beta_boot', p_beta_boot, '\n')
+})
+```
+
+### Exercise 6.2.
+Use the model $$Y_i = X_i + \epsilon_i$$,
+where $X_1, \ldots, X_n \sim WEIB(0.4, 4)$ are iid., $\epsilon_i = X_i\cdot\delta_i, \delta_1, \ldots, \delta_n \sim\mathcal{N}(0,4)$ are iid., $\beta = 0.5$, and $n = 50$. Repeat the simulation study of exercise 5.3 under this model
+with respect to the resampling scheme given under 6.1. (To generate $WEIB(0.4, 4)$
+compare Exercise 2.3).
+```{r}
+simulate_ci_weibull <- function(beta = 0.5, sigma2 = 4, alpha = 0.05, m = 1000) {
+  X <- rweibull(n = 50, shape = 0.4, scale = 4)
+  n <- length(X)
+  eps <- X * rnorm(n = 50, mean = 0, sd = sqrt(sigma2))
+  Y <- X * beta + eps
+  cis <- ci(X, Y, alpha)
+  cis_boot <- ci_boot(X, Y, alpha, m)
+  return(c(cis, cis_boot))
+}
+```
+```{r}
+suppressWarnings({
+  set.seed(123)
+  rep <- 100
+  alpha <- 0.1
+  m <- 1000
+  sim <- replicate(rep, simulate_ci_weibull())
+  ci_mean <- mean(sim[2,] - sim[1,])
+  ci_mean_boot <- mean(sim[4,] - sim[3,])
+  p_ci <- mean(sim[1,] < sim[3,] & sim[2,] > sim[4,])
+  p_beta <- mean(sim[1,] < beta & beta < sim[2,])
+  p_beta_boot <- mean(sim[3,] < beta & beta < sim[4,])
+  cat('ci_mean', ci_mean, '\n')
+  cat('ci_mean_boot', ci_mean_boot, '\n')
+  cat('p_ci', p_ci, '\n')
+  cat('p_beta', p_beta, '\n')
+  cat('p_beta_boot', p_beta_boot, '\n')
+})
+```
