@@ -1,0 +1,47 @@
+---
+title: "boot_uebung9_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## Exercise 7.1.
+Simulate iid. observations $(Y_i,X_i)_{1\leq i\leq n}$, with $n = 50$, according to the model $$Y_i = X_i \beta + \epsilon_i ,$$ where $X_i \sim \text{UNI}$ is independent of $\epsilon_i \sim \mathcal{N}(0, 1)$ and $\beta = 5$.
+Apply resampling scheme 7.2 with 1000 wild bootstrap replications to test $$H_0 : \mathcal{M}(x, \beta) = x\beta, \beta\in\mathbb{R}.$$
+Repeat this test 100 times and draw the edf. of the p-values.
+```{r}
+n <- 50
+X <- runif(n = n)
+epsilon <- rnorm(n = n, mean = 0, sd = 1)
+beta <- 5
+num_wild_bootsrap_reps <- 1000
+Y <- X * beta + epsilon
+```
+Step (A):
+```{r}
+LSE <- function(X, Y) {
+  model <- lm(Y ~ X - 1)
+  beta_hat <- model$coefficients
+  epsilon <- Y - t(X) * beta_hat
+  return(c(LSE.beta_hat = beta_hat, LSE.epsilon = epsilon))
+}
+```
+Step (B):
+```{r}
+D_n <- function(X, epsilon) {
+  index <- order(X)
+  epsilon_sort <- epsilon[index]
+  R_n <- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(max(abs(R_n)))
+}
+```
+```{r}
+W_n_squared <- function(X, epsilon) {
+  index <- order(X)
+  epsilon_sort <- epsilon[index]
+  R_n <- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(mean(R_n^2))
+}
+```
