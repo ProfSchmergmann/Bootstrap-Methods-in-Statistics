@@ -13,19 +13,19 @@ Apply resampling scheme 7.2 with 1000 wild bootstrap replications to test $$H_0 
 Repeat this test 100 times and draw the edf. of the p-values.
 ```{r}
 n <- 50
-X <- runif(n = n)
+X <- as.matrix(runif(n = n))
 epsilon <- rnorm(n = n, mean = 0, sd = 1)
 beta <- 5
 num_wild_bootsrap_reps <- 1000
-Y <- X * beta + epsilon
+Y <- as.matrix(X * beta + epsilon)
 ```
 Step (A):
 ```{r}
 LSE <- function(X, Y) {
   model <- lm(Y ~ X - 1)
   beta_hat <- model$coefficients
-  epsilon <- Y - t(X) * beta_hat
-  return(c(LSE.beta_hat = beta_hat, LSE.epsilon = epsilon))
+  epsilon_hat <- as.matrix(Y - X * beta_hat)
+  return(c(beta_hat, epsilon_hat))
 }
 ```
 Step (B):
@@ -44,4 +44,90 @@ W_n_squared <- function(X, epsilon) {
   R_n <- (1 / sqrt(n)) * cumsum(epsilon_sort)
   return(mean(R_n^2))
 }
+```
+Step (C):
+```{r}
+V_boot <- function(n, m) {
+  library(extraDistr)
+  return(replicate(n = m, expr = sample(rsign(n), n, replace = TRUE)))
+}
+```
+Step (D):
+```{r}
+residuals <- function(X, epsilon_hat, beta_hat, V_boot) {
+  epsilon_star <- epsilon_hat %*% V_boot
+  Y_star <- t(X) %*% beta_hat + epsilon_star
+  return(c(epsilon_star, Y_star))
+}
+```
+Step (E):
+```{r}
+LSE_wild_boot <- function(X, Y_boot) {
+  X_temp <- X
+  model <- apply(X = Y_boot, MARGIN = 2, FUN = lm(X ~ X_temp - 1))
+  beta_hat_star <- model$coefficients
+  return(beta_hat_star)
+}
+```
+Step (F):
+```{r}
+D_n_boot <- function(X, epsilon_star) {
+  index <- order(X)
+  epsilon_sort <- epsilon_star[index]
+  R_n <- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(max(abs(R_n)))
+}
+```
+```{r}
+W_n_squared_boot <- function(X, epsilon_star) {
+  index <- order(X)
+  epsilon_sort <- epsilon_star[index]
+  R_n <- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(mean(R_n^2))
+}
+```
+Step (G):
+```{r}
+p_values <- function(D_n, D_n_boot, W_n, W_n_boot) {
+  p_D_n <- mean(D_n - D_n_boot)
+  p_W_n <- mean(W_n - W_n_boot)
+  return(c(p_D_n, p_W_n))
+}
+```
+Combined:
+```{r}
+resampling72 <- function(X, Y, m) {
+  lse <- LSE(X, Y)
+  beta_hat <- lse[1]
+  epsilon_hat <- lse[2]
+
+  # epsilon_hat kommt hier leider als ein Wert aus der Funktion raus, hat aber innerhalb der Funktion den richtigen shape. Daher geht das weiterrechnen leider auch nicht.
+
+  d_n <- D_n(X, epsilon_hat)
+  w_n_squared <- W_n_squared(X, epsilon_hat)
+
+  v_boot <- V_boot(length(X), m)
+
+  res <- residuals(X, epsilon_hat, beta_hat, v_boot)
+  epsilon_star <- res[1]
+  y_star <- res[2]
+
+  beta_hat_star <- LSE_wild_boot(X, y_star)
+
+  d_n_boot <- D_n_boot(X, epsilon_star)
+  w_n_squared_boot <- W_n_squared_boot(X, epsilon_star)
+
+  # Die Berechnung der p-Werte war uns unklar, daher diese Berechnung.
+
+  p_vals <- p_values(d_n, d_n_boot, w_n_squared, w_n_squared_boot)
+  p_d_n <- p_vals[1]
+  p_W_n <- p_vals[2]
+  cat('p_d_n', p_d_n)
+  print("\n")
+  cat('p_W_n', p_W_n)
+}
+```
+Test:
+```{r}
+# resampling72(X, Y, num_wild_bootsrap_reps)
 ```

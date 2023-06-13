@@ -11,7 +11,7 @@
 
 <meta name="author" content="Sven Bergmann, Malte Lennartz" />
 
-<meta name="date" content="2023-06-07" />
+<meta name="date" content="2023-06-13" />
 
 <title>boot_uebung9_team1</title>
 
@@ -352,7 +352,7 @@ display: none;
 
 <h1 class="title toc-ignore">boot_uebung9_team1</h1>
 <h4 class="author">Sven Bergmann, Malte Lennartz</h4>
-<h4 class="date">2023-06-07</h4>
+<h4 class="date">2023-06-13</h4>
 
 </div>
 
@@ -368,17 +368,17 @@ resampling scheme 7.2 with 1000 wild bootstrap replications to test
 \beta\in\mathbb{R}.\]</span> Repeat this test 100 times and draw the
 edf. of the p-values.</p>
 <pre class="r"><code>n &lt;- 50
-X &lt;- runif(n = n)
+X &lt;- as.matrix(runif(n = n))
 epsilon &lt;- rnorm(n = n, mean = 0, sd = 1)
 beta &lt;- 5
 num_wild_bootsrap_reps &lt;- 1000
-Y &lt;- X * beta + epsilon</code></pre>
+Y &lt;- as.matrix(X * beta + epsilon)</code></pre>
 <p>Step (A):</p>
 <pre class="r"><code>LSE &lt;- function(X, Y) {
   model &lt;- lm(Y ~ X - 1)
   beta_hat &lt;- model$coefficients
-  epsilon &lt;- Y - t(X) * beta_hat
-  return(c(LSE.beta_hat = beta_hat, LSE.epsilon = epsilon))
+  epsilon_hat &lt;- as.matrix(Y - X * beta_hat)
+  return(c(beta_hat, epsilon_hat))
 }</code></pre>
 <p>Step (B):</p>
 <pre class="r"><code>D_n &lt;- function(X, epsilon) {
@@ -393,6 +393,76 @@ Y &lt;- X * beta + epsilon</code></pre>
   R_n &lt;- (1 / sqrt(n)) * cumsum(epsilon_sort)
   return(mean(R_n^2))
 }</code></pre>
+<p>Step (C):</p>
+<pre class="r"><code>V_boot &lt;- function(n, m) {
+  library(extraDistr)
+  return(replicate(n = m, expr = sample(rsign(n), n, replace = TRUE)))
+}</code></pre>
+<p>Step (D):</p>
+<pre class="r"><code>residuals &lt;- function(X, epsilon_hat, beta_hat, V_boot) {
+  epsilon_star &lt;- epsilon_hat %*% V_boot
+  Y_star &lt;- t(X) %*% beta_hat + epsilon_star
+  return(c(epsilon_star, Y_star))
+}</code></pre>
+<p>Step (E):</p>
+<pre class="r"><code>LSE_wild_boot &lt;- function(X, Y_boot) {
+  X_temp &lt;- X
+  model &lt;- apply(X = Y_boot, MARGIN = 2, FUN = lm(X ~ X_temp - 1))
+  beta_hat_star &lt;- model$coefficients
+  return(beta_hat_star)
+}</code></pre>
+<p>Step (F):</p>
+<pre class="r"><code>D_n_boot &lt;- function(X, epsilon_star) {
+  index &lt;- order(X)
+  epsilon_sort &lt;- epsilon_star[index]
+  R_n &lt;- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(max(abs(R_n)))
+}</code></pre>
+<pre class="r"><code>W_n_squared_boot &lt;- function(X, epsilon_star) {
+  index &lt;- order(X)
+  epsilon_sort &lt;- epsilon_star[index]
+  R_n &lt;- (1 / sqrt(n)) * cumsum(epsilon_sort)
+  return(mean(R_n^2))
+}</code></pre>
+<p>Step (G):</p>
+<pre class="r"><code>p_values &lt;- function(D_n, D_n_boot, W_n, W_n_boot) {
+  p_D_n &lt;- mean(D_n - D_n_boot)
+  p_W_n &lt;- mean(W_n - W_n_boot)
+  return(c(p_D_n, p_W_n))
+}</code></pre>
+<p>Combined:</p>
+<pre class="r"><code>resampling72 &lt;- function(X, Y, m) {
+  lse &lt;- LSE(X, Y)
+  beta_hat &lt;- lse[1]
+  epsilon_hat &lt;- lse[2]
+
+  # epsilon_hat kommt hier leider als ein Wert aus der Funktion raus, hat aber innerhalb der Funktion den richtigen shape. Daher geht das weiterrechnen leider auch nicht.
+
+  d_n &lt;- D_n(X, epsilon_hat)
+  w_n_squared &lt;- W_n_squared(X, epsilon_hat)
+
+  v_boot &lt;- V_boot(length(X), m)
+
+  res &lt;- residuals(X, epsilon_hat, beta_hat, v_boot)
+  epsilon_star &lt;- res[1]
+  y_star &lt;- res[2]
+
+  beta_hat_star &lt;- LSE_wild_boot(X, y_star)
+
+  d_n_boot &lt;- D_n_boot(X, epsilon_star)
+  w_n_squared_boot &lt;- W_n_squared_boot(X, epsilon_star)
+
+  # Die Berechnung der p-Werte war uns unklar, daher diese Berechnung.
+
+  p_vals &lt;- p_values(d_n, d_n_boot, w_n_squared, w_n_squared_boot)
+  p_d_n &lt;- p_vals[1]
+  p_W_n &lt;- p_vals[2]
+  cat(&#39;p_d_n&#39;, p_d_n)
+  print(&quot;\n&quot;)
+  cat(&#39;p_W_n&#39;, p_W_n)
+}</code></pre>
+<p>Test:</p>
+<pre class="r"><code># resampling72(X, Y, num_wild_bootsrap_reps)</code></pre>
 </div>
 
 
