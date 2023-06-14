@@ -25,7 +25,8 @@ LSE <- function(X, Y) {
   model <- lm(Y ~ X - 1)
   beta_hat <- model$coefficients
   epsilon_hat <- as.matrix(Y - X * beta_hat)
-  return(c(beta_hat, epsilon_hat))
+  res <- list(beta_hat = beta_hat, epsilon_hat = epsilon_hat)
+  return(res)
 }
 ```
 Step (B):
@@ -55,16 +56,18 @@ V_boot <- function(n, m) {
 Step (D):
 ```{r}
 residuals <- function(X, epsilon_hat, beta_hat, V_boot) {
-  epsilon_star <- epsilon_hat %*% V_boot
-  Y_star <- t(X) %*% beta_hat + epsilon_star
-  return(c(epsilon_star, Y_star))
+  epsilon_star <- t(epsilon_hat) %*% V_boot
+  X_tmp <- X
+  Y_star <- apply(X = epsilon_star, MARGIN = 2, FUN = function(eps) X_tmp * beta_hat + eps)
+  res <- list(epsilon_star = epsilon_star, Y_star = Y_star)
+  return(res)
 }
 ```
 Step (E):
 ```{r}
 LSE_wild_boot <- function(X, Y_boot) {
   X_temp <- X
-  model <- apply(X = Y_boot, MARGIN = 2, FUN = lm(X ~ X_temp - 1))
+  model <- apply(X = Y_boot, MARGIN = 2, FUN = function(y) lm(y ~ X_temp - 1))
   beta_hat_star <- model$coefficients
   return(beta_hat_star)
 }
@@ -89,8 +92,8 @@ W_n_squared_boot <- function(X, epsilon_star) {
 Step (G):
 ```{r}
 p_values <- function(D_n, D_n_boot, W_n, W_n_boot) {
-  p_D_n <- mean(D_n - D_n_boot)
-  p_W_n <- mean(W_n - W_n_boot)
+  p_D_n <- mean(D_n <= D_n_boot)
+  p_W_n <- mean(W_n <= W_n_boot)
   return(c(p_D_n, p_W_n))
 }
 ```
@@ -98,10 +101,8 @@ Combined:
 ```{r}
 resampling72 <- function(X, Y, m) {
   lse <- LSE(X, Y)
-  beta_hat <- lse[1]
-  epsilon_hat <- lse[2]
-
-  # epsilon_hat kommt hier leider als ein Wert aus der Funktion raus, hat aber innerhalb der Funktion den richtigen shape. Daher geht das weiterrechnen leider auch nicht.
+  beta_hat <- lse$beta_hat
+  epsilon_hat <- lse$epsilon_hat
 
   d_n <- D_n(X, epsilon_hat)
   w_n_squared <- W_n_squared(X, epsilon_hat)
@@ -109,25 +110,22 @@ resampling72 <- function(X, Y, m) {
   v_boot <- V_boot(length(X), m)
 
   res <- residuals(X, epsilon_hat, beta_hat, v_boot)
-  epsilon_star <- res[1]
-  y_star <- res[2]
+  epsilon_star <- res$epsilon_star
+  y_star <- res$Y_star
 
   beta_hat_star <- LSE_wild_boot(X, y_star)
 
   d_n_boot <- D_n_boot(X, epsilon_star)
   w_n_squared_boot <- W_n_squared_boot(X, epsilon_star)
 
-  # Die Berechnung der p-Werte war uns unklar, daher diese Berechnung.
-
   p_vals <- p_values(d_n, d_n_boot, w_n_squared, w_n_squared_boot)
   p_d_n <- p_vals[1]
   p_W_n <- p_vals[2]
-  cat('p_d_n', p_d_n)
-  print("\n")
-  cat('p_W_n', p_W_n)
+  cat('p_d_n:', p_d_n, ',')
+  cat('p_W_n:', p_W_n)
 }
 ```
 Test:
 ```{r}
-# resampling72(X, Y, num_wild_bootsrap_reps)
+resampling72(X, Y, num_wild_bootsrap_reps)
 ```
