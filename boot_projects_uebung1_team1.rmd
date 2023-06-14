@@ -1,0 +1,41 @@
+---
+title: "boot_projects_uebung1_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## 1. Aufgabe
+(i) Implementieren Sie für ein beliebig vorgegebenes $\alpha$ > 0 die Verteilungsfunktion, die Dichte und die Quantilfunktion.
+```{r}
+F <- function(alpha, x) {
+  return(ifelse(x >= 0, 1 - (1 + alpha * x)^(-1 / alpha), 0))
+}
+f <- function(alpha, x) {
+  return(ifelse(x >= 0, (1 + alpha * x)^(-(alpha + 1) / alpha), 0))
+}
+F_minus_1 <- function(alpha, x) {
+  return(ifelse(x != 0, -((-1 + (1 - x)^alpha) * (1 - x)^(-alpha)) / alpha, 0))
+}
+```
+(ii) Implementieren Sie eine Funktion mit der Zufallsvariablen nach $F(\dot, 0.5)$ erzeugt werden können.
+```{r}
+rf <- function(n, alpha = 0.5) {
+  return(F_minus_1(alpha, runif(n)))
+}
+```
+(iii) Erzeugen Sie 10000 unabhängige $F(\dot, 0.5)$ verteilte Zufallsvariablen und visualisieren Sie das Ergebnis in einem Histogramm zusammen mit der zugehörigen Dichtefunktion.
+```{r}
+n <- 10000
+X <- rf(n)
+hist(X, breaks = 100, freq = FALSE)
+vals <- 0:100
+lines(x = f(alpha = 0.5, x = vals))
+```
+(iv) Wiederholen Sie (iii) und verwenden Sie anstelle des Histogramms den Dichteschätzer plot(density(...)...).
+```{r}
+hist(X, breaks = 100, freq = FALSE)
+lines(density(X))
+```

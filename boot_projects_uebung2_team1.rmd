@@ -1,0 +1,65 @@
+---
+title: "boot_projects_uebung2_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## 2.Aufgabe
+```{r}
+f <- function(x, alpha, beta) {
+  if (alpha <= 0) return(0)
+  if (beta <= 0) return(0)
+  return(ifelse(x >= 0, alpha / beta *
+    (x / beta)^(alpha - 1) *
+    exp(-(x / beta)^alpha), 0))
+}
+```
+(i)
+```{r}
+n <- 100
+X_weibull <- rweibull(n, shape = 1)
+ML <- function(x, par) {
+  alpha <- par[1]
+  beta <- par[2]
+  return(sum(log(f(x, alpha, beta))))
+}
+optim(par = c(1, 1), fn = ML, x = X_weibull, control = list(fnscale = -1))
+```
+(ii) Implementieren Sie einen Goodness-Of-Fit Test um die Nullhypothese: "Die Daten stammen aus einer Weibull-Verteilung" vs. die Alternative: "Die Daten stammen nicht aus einer Weibull-Verteilung", zu testen. Benutzen Sie dabei sowohl die KS als auch die CVM Teststatistiken.
+```{r}
+D_n <- function(Z) {
+  z <- sort(Z)
+  n <- length(Z)
+  D <- n^(1 / 2) * max(((1:n) / n) - z, z - (((1:n) - 1) / n))
+}
+
+W_n_squared <- function(Z) {
+  z <- sort(Z)
+  n <- length(Z)
+  W <- sum((z - (2 * (1:n) - 1) / (2 * n))^2) + 1 / (12 * n)
+}
+```
+```{r}
+X_boot <- function(X_weibull, m) {
+  return(replicate(m, sample(x = X_weibull, size = length(X_weibull), replace = TRUE)))
+}
+```
+```{r}
+gof_test <- function(X, n) {
+  d_n <- D_n(Z = X)
+  w_n_squared <- W_n_squared(Z = X)
+  X_boot <- X_boot(X, n)
+  d_n_stars <- apply(X = X_boot, MARGIN = 2, FUN = function(x) D_n(x))
+  w_n_squaredn_stars <- apply(X = X_boot, MARGIN = 2, FUN = function(x) W_n_squared(x))
+  p_d_n <- mean(d_n < d_n_stars)
+  p_w_n_squared <- mean(w_n_squared < w_n_squaredn_stars)
+  return(c(p_d_n, p_w_n_squared))
+}
+```
+Test:
+```{r}
+gof_test(X = X_weibull, n = 100)
+```
