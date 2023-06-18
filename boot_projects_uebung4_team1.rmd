@@ -9,8 +9,7 @@ df_print: paged
 
 ## 4. Aufgabe
 ```{r}
-table <- read.csv('aufgabe4.csv', header = FALSE)
-print(table)
+table <- as.matrix(read.csv('aufgabe4.csv', header = FALSE))
 ```
 ```{r}
 Teststatistik <- function(table) {
@@ -36,11 +35,21 @@ bootstrap <- function(table, m = 1000) {
   }
   # Zentrieren
   epsilon <- apply(X = epsilon, MARGIN = 2, FUN = function(x) x - mean(x[!is.na(x)]))
-  epsilon_boot <- lapply(X = 1:spalten, FUN = function(spalte) replicate(n = m, expr = sample(x = epsilon[, spalte], replace = TRUE, size = n_i[spalte])))
-  mu <- replicate(n = spalten, expr = mu_hat + sigma_hat)
-  print(mu)
-  X <- lapply(X = 1:m, FUN = function(idx) mu_hat + sigma_hat * epsilon_boot[idx])
-  print(X)
+
+  epsilon_boot <- replicate(n = m, expr = sapply(X = 1:spalten, FUN = function(spalte) as.numeric(c(sample(x = epsilon[, spalte][!is.na(epsilon[, spalte])], replace = TRUE, size = n_i[spalte]), replicate(max(n_i) - n_i[spalte], NA)))))
+
+  mu <- matrix(mu_hat, nrow = max(n_i), ncol = length(mu_hat), byrow = TRUE)
+  sigma <- matrix(sigma_hat, nrow = max(n_i), ncol = length(sigma_hat), byrow = TRUE)
+  X_boot <- lapply(X = 1:m, FUN = function(idx) epsilon_boot[, , idx] * sigma + mu)
+
+  statistiken <- list()
+  for (matrix_num in 1:m) {
+    statistiken[matrix_num] <- Teststatistik(as.data.frame(X_boot[matrix_num]))$T
+  }
+  return(statistiken)
 }
-bootstrap(table)
+```
+```{r}
+p_value <- mean(Teststatistik(table)$T < bootstrap(table, 1000))
+print(p_value)
 ```

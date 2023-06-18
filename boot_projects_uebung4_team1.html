@@ -359,22 +359,44 @@ display: none;
 
 <div id="aufgabe" class="section level2">
 <h2>4. Aufgabe</h2>
-<pre class="r"><code>table &lt;- read.csv(&#39;aufgabe4.csv&#39;, header = FALSE)
-print(table)</code></pre>
-<pre><code>##    V1  V2  V3 V4 V5 V6 V7 V8
-## 1  76  87 105 95 76 78 82 84
-## 2  82  95  83 90 76 78 79 86
-## 3  83  98  76 76 78 78 81 85
-## 4  54 100  75 76 79 86 79 82
-## 5  35 109  51 87 72 87 77 77
-## 6  46 109  76 79 68 81 79 76
-## 7  87 100  93 77 75 73 79 77
-## 8  68  81  75 71 78 67 78 80
-## 9  NA  75  62 NA NA 75 79 83
-## 10 NA  68  NA NA NA 82 82 81
-## 11 NA  67  NA NA NA 83 76 78
-## 12 NA  NA  NA NA NA NA 73 78
-## 13 NA  NA  NA NA NA NA 64 78</code></pre>
+<pre class="r"><code>table &lt;- as.matrix(read.csv(&#39;aufgabe4.csv&#39;, header = FALSE))</code></pre>
+<pre class="r"><code>Teststatistik &lt;- function(table) {
+  n_i &lt;- apply(X = table, MARGIN = 2, FUN = function(x) sum(!is.na(x)))
+  s &lt;- apply(X = table, MARGIN = 2, FUN = function(x) sd(x[!is.na(x)]))
+  omega &lt;- n_i / s^2
+  mu &lt;- apply(X = table, MARGIN = 2, FUN = function(x) mean(x[!is.na(x)]))
+  mu_0_dach &lt;- sum(omega * mu) / sum(omega)
+  T &lt;- sum(omega * (mu - mu_0_dach)^2)
+  return(list(n_i = n_i, s = s, omega = omega, mu = mu, mu_0_dach = mu_0_dach, T = T))
+}</code></pre>
+<pre class="r"><code>bootstrap &lt;- function(table, m = 1000) {
+  statistik &lt;- Teststatistik(table)
+  mu_hat &lt;- statistik$mu
+  sigma_hat &lt;- statistik$s
+  n_i &lt;- statistik$n_i
+  spalten &lt;- length(n_i)
+  epsilon &lt;- matrix(ncol = spalten, nrow = max(n_i))
+  for (spalte in 1:spalten) {
+    epsilon[, spalte] &lt;- (table[, spalte] - mu_hat[spalte]) / sigma_hat[spalte]
+  }
+  # Zentrieren
+  epsilon &lt;- apply(X = epsilon, MARGIN = 2, FUN = function(x) x - mean(x[!is.na(x)]))
+
+  epsilon_boot &lt;- replicate(n = m, expr = sapply(X = 1:spalten, FUN = function(spalte) as.numeric(c(sample(x = epsilon[, spalte][!is.na(epsilon[, spalte])], replace = TRUE, size = n_i[spalte]), replicate(max(n_i) - n_i[spalte], NA)))))
+
+  mu &lt;- matrix(mu_hat, nrow = max(n_i), ncol = length(mu_hat), byrow = TRUE)
+  sigma &lt;- matrix(sigma_hat, nrow = max(n_i), ncol = length(sigma_hat), byrow = TRUE)
+  X_boot &lt;- lapply(X = 1:m, FUN = function(idx) epsilon_boot[, , idx] * sigma + mu)
+
+  statistiken &lt;- list()
+  for (matrix_num in 1:m) {
+    statistiken[matrix_num] &lt;- Teststatistik(as.data.frame(X_boot[matrix_num]))$T
+  }
+  return(statistiken)
+}</code></pre>
+<pre class="r"><code>p_value &lt;- mean(Teststatistik(table)$T &lt; bootstrap(table, 1000))
+print(p_value)</code></pre>
+<pre><code>## [1] 0.846</code></pre>
 </div>
 
 
