@@ -13,7 +13,7 @@
 
 <meta name="date" content="2023-06-18" />
 
-<title>boot_projects_uebung2_team1</title>
+<title>boot_projects_uebung3_team1</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,7 +350,7 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">boot_projects_uebung2_team1</h1>
+<h1 class="title toc-ignore">boot_projects_uebung3_team1</h1>
 <h4 class="author">Sven Bergmann, Malte Lennartz</h4>
 <h4 class="date">2023-06-18</h4>
 
@@ -358,73 +358,23 @@ display: none;
 
 
 <div id="aufgabe" class="section level2">
-<h2>2.Aufgabe</h2>
-<pre class="r"><code>f &lt;- function(x, alpha, beta) {
-  if (alpha &lt;= 0) return(0)
-  if (beta &lt;= 0) return(0)
-  return(ifelse(x &gt;= 0, alpha / beta *
-    (x / beta)^(alpha - 1) *
-    exp(-(x / beta)^alpha), 0))
-}</code></pre>
-<ol style="list-style-type: lower-roman">
-<li></li>
-</ol>
-<pre class="r"><code>n &lt;- 100
-X_weibull &lt;- rweibull(n, shape = 1)
-ML &lt;- function(x, par) {
-  alpha &lt;- par[1]
-  beta &lt;- par[2]
-  return(sum(log(f(x, alpha, beta))))
-}
-optim(par = c(1, 1), fn = ML, x = X_weibull, control = list(fnscale = -1))</code></pre>
-<pre><code>## $par
-## [1] 1.041245 1.046732
-## 
-## $value
-## [1] -102.8841
-## 
-## $counts
-## function gradient 
-##       39       NA 
-## 
-## $convergence
-## [1] 0
-## 
-## $message
-## NULL</code></pre>
-<ol start="2" style="list-style-type: lower-roman">
-<li>Implementieren Sie einen Goodness-Of-Fit Test um die Nullhypothese:
-“Die Daten stammen aus einer Weibull-Verteilung” vs. die Alternative:
-“Die Daten stammen nicht aus einer Weibull-Verteilung”, zu testen.
-Benutzen Sie dabei sowohl die KS als auch die CVM Teststatistiken.</li>
-</ol>
-<pre class="r"><code>D_n &lt;- function(Z) {
-  z &lt;- sort(Z)
-  n &lt;- length(Z)
-  D &lt;- n^(1 / 2) * max(((1:n) / n) - z, z - (((1:n) - 1) / n))
-}
-
-W_n_squared &lt;- function(Z) {
-  z &lt;- sort(Z)
-  n &lt;- length(Z)
-  W &lt;- sum((z - (2 * (1:n) - 1) / (2 * n))^2) + 1 / (12 * n)
-}</code></pre>
-<pre class="r"><code>X_boot &lt;- function(X_weibull, m) {
-  return(replicate(m, sample(x = X_weibull, size = length(X_weibull), replace = TRUE)))
-}</code></pre>
-<pre class="r"><code>gof_test &lt;- function(X, n) {
-  d_n &lt;- D_n(Z = X)
-  w_n_squared &lt;- W_n_squared(Z = X)
-  X_boot &lt;- X_boot(X, n)
-  d_n_stars &lt;- apply(X = X_boot, MARGIN = 2, FUN = function(x) D_n(x))
-  w_n_squaredn_stars &lt;- apply(X = X_boot, MARGIN = 2, FUN = function(x) W_n_squared(x))
-  p_d_n &lt;- mean(d_n &lt; d_n_stars)
-  p_w_n_squared &lt;- mean(w_n_squared &lt; w_n_squaredn_stars)
-  return(c(p_d_n, p_w_n_squared))
-}</code></pre>
-<p>Test:</p>
-<pre class="r"><code>gof_test(X = X_weibull, n = 100)</code></pre>
-<pre><code>## [1] 0.20 0.42</code></pre>
+<h2>4. Aufgabe</h2>
+<pre class="r"><code>table &lt;- read.csv(&#39;aufgabe4.csv&#39;, header = FALSE)
+print(table)</code></pre>
+<pre><code>##    V1  V2  V3 V4 V5 V6 V7 V8
+## 1  76  87 105 95 76 78 82 84
+## 2  82  95  83 90 76 78 79 86
+## 3  83  98  76 76 78 78 81 85
+## 4  54 100  75 76 79 86 79 82
+## 5  35 109  51 87 72 87 77 77
+## 6  46 109  76 79 68 81 79 76
+## 7  87 100  93 77 75 73 79 77
+## 8  68  81  75 71 78 67 78 80
+## 9  NA  75  62 NA NA 75 79 83
+## 10 NA  68  NA NA NA 82 82 81
+## 11 NA  67  NA NA NA 83 76 78
+## 12 NA  NA  NA NA NA NA 73 78
+## 13 NA  NA  NA NA NA NA 64 78</code></pre>
 </div>
 
 

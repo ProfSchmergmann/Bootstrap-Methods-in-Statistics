@@ -1,0 +1,46 @@
+---
+title: "boot_projects_uebung3_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## 4. Aufgabe
+```{r}
+table <- read.csv('aufgabe4.csv', header = FALSE)
+print(table)
+```
+```{r}
+Teststatistik <- function(table) {
+  n_i <- apply(X = table, MARGIN = 2, FUN = function(x) sum(!is.na(x)))
+  s <- apply(X = table, MARGIN = 2, FUN = function(x) sd(x[!is.na(x)]))
+  omega <- n_i / s^2
+  mu <- apply(X = table, MARGIN = 2, FUN = function(x) mean(x[!is.na(x)]))
+  mu_0_dach <- sum(omega * mu) / sum(omega)
+  T <- sum(omega * (mu - mu_0_dach)^2)
+  return(list(n_i = n_i, s = s, omega = omega, mu = mu, mu_0_dach = mu_0_dach, T = T))
+}
+```
+```{r}
+bootstrap <- function(table, m = 1000) {
+  statistik <- Teststatistik(table)
+  mu_hat <- statistik$mu
+  sigma_hat <- statistik$s
+  n_i <- statistik$n_i
+  spalten <- length(n_i)
+  epsilon <- matrix(ncol = spalten, nrow = max(n_i))
+  for (spalte in 1:spalten) {
+    epsilon[, spalte] <- (table[, spalte] - mu_hat[spalte]) / sigma_hat[spalte]
+  }
+  # Zentrieren
+  epsilon <- apply(X = epsilon, MARGIN = 2, FUN = function(x) x - mean(x[!is.na(x)]))
+  epsilon_boot <- lapply(X = 1:spalten, FUN = function(spalte) replicate(n = m, expr = sample(x = epsilon[, spalte], replace = TRUE, size = n_i[spalte])))
+  mu <- replicate(n = spalten, expr = mu_hat + sigma_hat)
+  print(mu)
+  X <- lapply(X = 1:m, FUN = function(idx) mu_hat + sigma_hat * epsilon_boot[idx])
+  print(X)
+}
+bootstrap(table)
+```

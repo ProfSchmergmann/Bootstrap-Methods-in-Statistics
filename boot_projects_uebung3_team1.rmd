@@ -1,0 +1,72 @@
+---
+title: "boot_projects_uebung3_team1"
+author: "Sven Bergmann, Malte Lennartz"
+date: "`r Sys.Date()`"
+output:
+html_document:
+df_print: paged
+---
+
+## 3. Aufgabe
+```{r}
+table <- read.table('aufgabe3.txt')
+```
+```{r}
+one_mode <- function(y) {
+  nr <- 0
+  for (i in 2:(length(y) - 1)) {
+    nr <- nr + (y[i - 1] < y[i] && y[i] > y[i + 1])
+    if (nr > 1) {
+      return(FALSE)
+    }
+  }
+  # nr <- length(which(diff(sign(diff(y))) == -2)) # Alternativ Vorzeichentest
+  return(TRUE)
+}
+```
+```{r}
+getBW <- function(x, bw = 5, eps = 1e-5) {
+  # Linker und rechter Rand f<U+00FC>r Bisektion
+  right <- -1
+  left <- 0
+  # Falls nur ein Mode mit initialer BW, als rechten Wert speichern
+  if (one_mode(density(x, bw = bw)$y)) {
+    right <- bw
+  } else { # Falls mehr als ein Mode mit initialer BW, als linken Wert speichern
+    left <- bw
+    while (!one_mode(density(x, bw = bw)$y)) { # rechten Rand grosszuegig bestimmen
+      bw <- bw * 10
+    }
+    right <- bw
+  }
+  while (right - left > eps) {
+    center <- (left + right) / 2
+    dens <- density(x, bw = center)
+    if (one_mode(dens$y)) {
+      right <- center
+    } else {
+      left <- center
+    }
+  }
+  return(right)
+}
+```
+```{r}
+bootstrap <- function(X, h0, m) {
+  n <- length(X)
+  X.boot <- replicate(m, sample(X, replace = TRUE)
+    + h0 * rnorm(n))
+  bws <- apply(X.boot, 2, getBW)
+  return(mean(bws > h0))
+}
+```
+```{r}
+plot(density(table$V1))
+bw <- getBW(table$V1)
+plot(density(table$V1, bw = bw), main = "Dichte der Verteilung mit H_0")
+```
+```{r}
+m <- 100
+p.value <- bootstrap(table$V1, bw, m)
+cat('p Wert:', p.value)
+```
