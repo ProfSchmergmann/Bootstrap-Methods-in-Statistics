@@ -32,6 +32,17 @@ Teststatistik <- function(table, mu_0) {
 }
 ```
 ```{r}
+draw_epsilons <- function(ncol, nrow, n_i) {
+  epsilon <- matrix(ncol = ncol, nrow = nrow)
+  for (col in 1:ncol) {
+    for (row in 1:n_i[col]) {
+      epsilon[row, col] <- rnorm(n = 1)
+    }
+  }
+  return(epsilon)
+}
+```
+```{r}
 bootstrap <- function(table, m = 1000) {
   # Statistik und andere nützliche Werte der Originaldaten berechnen
   statistik <- Teststatistik(table)
@@ -40,42 +51,14 @@ bootstrap <- function(table, m = 1000) {
   n_i <- statistik$n_i
 
   # Anzahl Spalten der Originaldaten
-  spalten <- length(n_i)
-
-  # Matrix für die Residuen erstellen
-  epsilon <- matrix(ncol = spalten, nrow = max(n_i))
-  # Epsilon nach der gegebenen Formel berechnen: (x_ij - mu_i) / sigma_i
-  for (spalte in 1:spalten) {
-    epsilon[, spalte] <- (table[, spalte] - mu_i_dach[spalte]) / s_i_dach[spalte]
-  }
-
-  # Residuen zentrieren, damit diese N(0,1)-verteilt sind
-  epsilon <- apply(X = epsilon, MARGIN = 2, FUN = function(x) x - mean(x[!is.na(x)]))
-
-  # Residuen für jede Spalte bootstrappen, sodass die Anzahl der Epsilons innerhalb der Spalten gleich bleibt
-  epsilon_boot <- replicate(n = m,
-                            expr = sapply(X = 1:spalten,
-                                          FUN = function(spalte)
-                                            as.numeric(
-                                              c(
-                                                # Bootstrapziehung der jeweiligen Spalte
-                                                sample(x = epsilon[, spalte][!is.na(epsilon[, spalte])],
-                                                       replace = TRUE,
-                                                       size = n_i[spalte]),
-                                                # Auffüllen mit "NA"
-                                                replicate(max(n_i) - n_i[spalte],
-                                                          NA)
-                                              )
-                                            )
-                            )
-  )
+  cols <- length(n_i)
 
   # Reshape der mu_i und s_i
   mu_i_matrix <- matrix(mu_i_dach, nrow = max(n_i), ncol = length(mu_i_dach), byrow = TRUE)
   s_i_matrix <- matrix(s_i_dach, nrow = max(n_i), ncol = length(s_i_dach), byrow = TRUE)
 
-  # Zusammenbauen der X_ij mit der epsilon_boot matrix, sowie der beiden mu_i und s_i Matrizen
-  X_boot <- lapply(X = 1:m, FUN = function(idx) epsilon_boot[, , idx] * s_i_matrix + mu_i_matrix)
+  # Zusammenbauen der X_ij mit der epsilon matrix, sowie der beiden mu_i und s_i Matrizen
+  X_boot <- lapply(X = 1:m, FUN = function(idx) mu_i_matrix + s_i_matrix * draw_epsilons(ncol = cols, nrow = max(n_i), n_i = n_i))
 
   # Erstellung der Liste der Statistiken der gebootstrapten X
   statistiken <- list()
