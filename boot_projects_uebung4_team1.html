@@ -11,9 +11,9 @@
 
 <meta name="author" content="Sven Bergmann, Malte Lennartz" />
 
-<meta name="date" content="2023-06-18" />
+<meta name="date" content="2023-06-24" />
 
-<title>boot_projects_uebung3_team1</title>
+<title>boot_projects_uebung4_team1</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,9 +350,9 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">boot_projects_uebung3_team1</h1>
+<h1 class="title toc-ignore">boot_projects_uebung4_team1</h1>
 <h4 class="author">Sven Bergmann, Malte Lennartz</h4>
-<h4 class="date">2023-06-18</h4>
+<h4 class="date">2023-06-24</h4>
 
 </div>
 
@@ -360,43 +360,64 @@ display: none;
 <div id="aufgabe" class="section level2">
 <h2>4. Aufgabe</h2>
 <pre class="r"><code>table &lt;- as.matrix(read.csv(&#39;aufgabe4.csv&#39;, header = FALSE))</code></pre>
-<pre class="r"><code>Teststatistik &lt;- function(table) {
+<pre class="r"><code>Teststatistik &lt;- function(table, mu_0) {
+  # Anzahl der Daten der jeweiligen Stichprobe
   n_i &lt;- apply(X = table, MARGIN = 2, FUN = function(x) sum(!is.na(x)))
-  s &lt;- apply(X = table, MARGIN = 2, FUN = function(x) sd(x[!is.na(x)]))
-  omega &lt;- n_i / s^2
-  mu &lt;- apply(X = table, MARGIN = 2, FUN = function(x) mean(x[!is.na(x)]))
-  mu_0_dach &lt;- sum(omega * mu) / sum(omega)
-  T &lt;- sum(omega * (mu - mu_0_dach)^2)
-  return(list(n_i = n_i, s = s, omega = omega, mu = mu, mu_0_dach = mu_0_dach, T = T))
+
+  # Geschätzte Standardabweichung innerhalb der jeweiligen Stichproben
+  s_i_dach &lt;- apply(X = table, MARGIN = 2, FUN = function(x) sd(x[!is.na(x)]))
+
+  # Geschätzter Erwartungswert innerhalb der jeweiligen Stichproben
+  mu_i_dach &lt;- apply(X = table, MARGIN = 2, FUN = function(x) mean(x[!is.na(x)]))
+
+  # Teststatistik berechnen:
+  omega &lt;- n_i / s_i_dach^2
+  mu_0_dach &lt;- sum(omega * mu_i_dach) / sum(omega)
+
+  # Je kleiner die Statistik, d.h. je näher der Wert mu_i_dach am Wert mu_0_dach liegt, desto wahrscheinlicher wird die Hypothese
+  T &lt;- sum(omega * (mu_i_dach - mu_0_dach)^2)
+  return(list(n_i = n_i, s_i_dach = s_i_dach, omega = omega, mu_i_dach = mu_i_dach, mu_0_dach = mu_0_dach, T = T))
+}</code></pre>
+<pre class="r"><code>draw_epsilons &lt;- function(ncol, nrow, n_i) {
+  epsilon &lt;- matrix(ncol = ncol, nrow = nrow)
+  for (col in 1:ncol) {
+    for (row in 1:n_i[col]) {
+      epsilon[row, col] &lt;- rnorm(n = 1)
+    }
+  }
+  return(epsilon)
 }</code></pre>
 <pre class="r"><code>bootstrap &lt;- function(table, m = 1000) {
+  # Statistik und andere nützliche Werte der Originaldaten berechnen
   statistik &lt;- Teststatistik(table)
-  mu_hat &lt;- statistik$mu
-  sigma_hat &lt;- statistik$s
+  mu_i_dach &lt;- statistik$mu_i_dach
+  s_i_dach &lt;- statistik$s_i_dach
   n_i &lt;- statistik$n_i
-  spalten &lt;- length(n_i)
-  epsilon &lt;- matrix(ncol = spalten, nrow = max(n_i))
-  for (spalte in 1:spalten) {
-    epsilon[, spalte] &lt;- (table[, spalte] - mu_hat[spalte]) / sigma_hat[spalte]
-  }
-  # Zentrieren
-  epsilon &lt;- apply(X = epsilon, MARGIN = 2, FUN = function(x) x - mean(x[!is.na(x)]))
 
-  epsilon_boot &lt;- replicate(n = m, expr = sapply(X = 1:spalten, FUN = function(spalte) as.numeric(c(sample(x = epsilon[, spalte][!is.na(epsilon[, spalte])], replace = TRUE, size = n_i[spalte]), replicate(max(n_i) - n_i[spalte], NA)))))
+  # Anzahl Spalten der Originaldaten
+  cols &lt;- length(n_i)
 
-  mu &lt;- matrix(mu_hat, nrow = max(n_i), ncol = length(mu_hat), byrow = TRUE)
-  sigma &lt;- matrix(sigma_hat, nrow = max(n_i), ncol = length(sigma_hat), byrow = TRUE)
-  X_boot &lt;- lapply(X = 1:m, FUN = function(idx) epsilon_boot[, , idx] * sigma + mu)
+  # Reshape der mu_i und s_i
+  mu_i_matrix &lt;- matrix(mu_i_dach, nrow = max(n_i), ncol = length(mu_i_dach), byrow = TRUE)
+  s_i_matrix &lt;- matrix(s_i_dach, nrow = max(n_i), ncol = length(s_i_dach), byrow = TRUE)
 
+  # Zusammenbauen der X_ij mit der epsilon matrix, sowie der beiden mu_i und s_i Matrizen
+  X_boot &lt;- lapply(X = 1:m, FUN = function(idx) mu_i_matrix + s_i_matrix * draw_epsilons(ncol = cols, nrow = max(n_i), n_i = n_i))
+
+  # Erstellung der Liste der Statistiken der gebootstrapten X
   statistiken &lt;- list()
   for (matrix_num in 1:m) {
+    # Berechnung der Teststatistiken für jede Bootstrap-Wiederholung
     statistiken[matrix_num] &lt;- Teststatistik(as.data.frame(X_boot[matrix_num]))$T
   }
+
+  # Rückgabe der Liste der Statistiken
   return(statistiken)
 }</code></pre>
-<pre class="r"><code>p_value &lt;- mean(Teststatistik(table)$T &lt; bootstrap(table, 1000))
+<pre class="r"><code># Berechnung des p-Wertes, indem die Teststatistik über die Testdaten mit den Statistiken der gebootstrapten Daten verglichen wird.
+p_value &lt;- mean(Teststatistik(table)$T &lt; bootstrap(table, 1000))
 print(p_value)</code></pre>
-<pre><code>## [1] 0.846</code></pre>
+<pre><code>## [1] 0.836</code></pre>
 </div>
 
 
