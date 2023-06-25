@@ -45,26 +45,44 @@ draw_epsilons <- function(ncol, nrow, n_i) {
 ```{r}
 bootstrap <- function(table, m = 1000) {
   # Statistik und andere nützliche Werte der Originaldaten berechnen
-  statistik <- Teststatistik(table)
-  mu_i_dach <- statistik$mu_i_dach
-  s_i_dach <- statistik$s_i_dach
-  n_i <- statistik$n_i
+  statistik_origin <- Teststatistik(table)
+  mu_i_dach_origin <- statistik_origin$mu_i_dach
+  s_i_dach_origin <- statistik_origin$s_i_dach
+  n_i <- statistik_origin$n_i
 
   # Anzahl Spalten der Originaldaten
   cols <- length(n_i)
 
-  # Reshape der mu_i und s_i
-  mu_i_matrix <- matrix(mu_i_dach, nrow = max(n_i), ncol = length(mu_i_dach), byrow = TRUE)
-  s_i_matrix <- matrix(s_i_dach, nrow = max(n_i), ncol = length(s_i_dach), byrow = TRUE)
+  # Erstelle m bootstrap samples der matrix
+  X_boot <- replicate(n = m, expr = apply(X = table, MARGIN = 2, FUN = function(table) sample(x = table, size = length(table), replace = TRUE)))
+  # Berechne von jedem der samples den geschätzten Erwartungswert
+  mu_i_boot <- apply(X = X_boot, MARGIN = 3, FUN = function(matrix) colMeans(matrix, na.rm = TRUE))
+  # Berechne von jedem der samples die geschätzte Standardabweichung
+  s_i_boot <- apply(X = X_boot, MARGIN = 3, FUN = function(matrix) apply(X = matrix, MARGIN = 2, FUN = function(col) sd(col, na.rm = TRUE)))
+  # Zusammenbauen der neuen X_boot
+  X_boot_built <- replicate(n = m, expr = matrix(ncol = cols, nrow = max(n_i)))
+  for (i in 1:m) {
+    for (col in 1:cols) {
+      mu <- mu_i_boot[col, m]
+      sd <- s_i_boot[col, m]
+      for (row in 1:n_i[col]) {
+        X_boot_built[row, col, i] <- mu + sd * rnorm(n = 1)
+      }
+    }
+  }
 
-  # Zusammenbauen der X_ij mit der epsilon matrix, sowie der beiden mu_i und s_i Matrizen
-  X_boot <- lapply(X = 1:m, FUN = function(idx) mu_i_matrix + s_i_matrix * draw_epsilons(ncol = cols, nrow = max(n_i), n_i = n_i))
+  # # Reshape der mu_i und s_i
+  # mu_i_matrix <- matrix(mu_i_dach_origin, nrow = max(n_i), ncol = length(mu_i_dach_origin), byrow = TRUE)
+  # s_i_matrix <- matrix(s_i_dach_origin, nrow = max(n_i), ncol = length(s_i_dach_origin), byrow = TRUE)
+  #
+  # # Zusammenbauen der X_ij mit der epsilon matrix, sowie der beiden mu_i und s_i Matrizen
+  # X_boot <- lapply(X = 1:m, FUN = function(idx) mu_i_matrix + s_i_matrix * draw_epsilons(ncol = cols, nrow = max(n_i), n_i = n_i))
 
   # Erstellung der Liste der Statistiken der gebootstrapten X
   statistiken <- list()
   for (matrix_num in 1:m) {
     # Berechnung der Teststatistiken für jede Bootstrap-Wiederholung
-    statistiken[matrix_num] <- Teststatistik(as.data.frame(X_boot[matrix_num]))$T
+    statistiken[matrix_num] <- Teststatistik(X_boot_built[, , matrix_num])$T
   }
 
   # Rückgabe der Liste der Statistiken
