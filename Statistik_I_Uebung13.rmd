@@ -5,7 +5,7 @@ author: Sven Bergmann
 ---
 
 ## Aufgabe 1
-1. Seien $Y \sim \text{EXP}(\lambda)$ und $Y \sim \text{EXP}(\mu)$ unabhängig, mit $\lambda\in(0,\infty) und $\mu\in(0,\infty)$ unbekannt. Sei $X = (Y, \min(Y,Z))\top$.
+Seien $Y \sim \text{EXP}(\lambda)$ und $Y \sim \text{EXP}(\mu)$ unabhängig, mit $\lambda\in(0,\infty) und $\mu\in(0,\infty)$ unbekannt. Sei $X = (Y, \min(Y,Z))\top$.
 
 a) Bestimmen Sie die Randverteilungen von $X$.
 
@@ -36,45 +36,100 @@ mit unabhängigen $\mathcal{N}(0, \sigma^2)$-verteilten Zufallsvariablen $Z_1, \
 je mit derselben unbekannten Varianz $\sigma^2 > 0$ zugrunde.
 Es sei $t_0 = 3.8$.
 Geben Sie ein Konfidenzintervall zum Konfidenzniveau $0.95$ für $a + bt_0$ an.
-```{r}
-x <- c(1, 1, 2, 3, 5, 3, 7, 6, 8, 9)
-t <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-n <- length(x)
-t_0 <- 3.8
-gamma <- 0.95
-```
+----
 Aus Beispiel 3.3:
 
-Tausche die Namen wegen der Vorschrift für $X_i$.
-
-Modell: $X_i = a + bt_i + Z_i, a, b \in\mathbb{R}$.
-
-Setze nun $\sigma_t^2 = \frac{1}{n}\sum\limits_{i=1}^{n}(t_i-\overline{t})^2$ mit $\overline{t}=\frac{1}{n}\sum\limits_{i=1}^{n}t_i$ und $y_j = \frac{t_j-\overline{t}}{\sigma_t}, j=1, \ldots, n$.
 ```{r}
-t_bar <- mean(t)
-sigma_t_hat_squared <- (1 / n) * sum((t - t_bar)^2)
-y <- (t - t_bar) / sqrt(sigma_t_hat_squared)
+ci_simple_lin_reg <- function(x, y, gamma = 0.95, t_0 = NULL) {
+  n <- length(x)
+  y_bar <- mean(y)
+  sigma_y_squared <- (1 / n) * sum((y - y_bar)^2)
+  t <- (y - y_bar) / sqrt(sigma_y_squared)
+
+  x_bar <- mean(x)
+  alpha_hat <- x_bar
+
+  x_t_bar <- mean(x * t)
+  beta_hat <- x_t_bar
+
+  sigma_hat_squared_alpha_hat_beta_hat <- mean(x^2) - x_bar^2 - x_t_bar^2
+
+  res_list_with_t_0 <- list()
+
+  sigma_y <- sd(y)
+  a_hat <- alpha_hat - beta_hat * (y_bar / sigma_y)
+  b_hat <- beta_hat / sigma_y
+  sigma_hat_squared_a_hat_b_hat <- (1 / n) * sum(x - (a_hat - (b_hat * y)))^2
+
+  if (length(t_0) != 0) {
+    term_alpha_hat_beta_hat <- qt(df = n - 1, p = 1 - (gamma / 2)) * sqrt((sigma_hat_squared_alpha_hat_beta_hat / (n - 2)) * (1 + t_0^2))
+    ci_lower_alpha_hat_beta_hat <- alpha_hat +
+      beta_hat * t_0 - term_alpha_hat_beta_hat
+    ci_upper_alpha_hat_beta_hat <- alpha_hat +
+      beta_hat * t_0 +
+      term_alpha_hat_beta_hat
+
+    term_a_hat_b_hat <- qt(df = n - 2, p = 1 - (gamma / 2)) * sqrt((sigma_hat_squared_a_hat_b_hat / (n - 2)) * (1 + t_0^2))
+    y_0 <- (t_0 * sigma_y) + y_bar
+    ci_lower_a_hat_b_hat <- a_hat + b_hat * y_0 - term_a_hat_b_hat
+    ci_upper_a_hat_b_hat <- a_hat + b_hat * y_0 + term_a_hat_b_hat
+
+    res_list_with_t_0 <- list(ci_lower_alpha_hat_beta_hat = ci_lower_alpha_hat_beta_hat, ci_upper_alpha_hat_beta_hat = ci_upper_alpha_hat_beta_hat,
+                              y_0 = y_0,
+                              ci_lower_a_hat_b_hat = ci_lower_a_hat_b_hat, ci_upper_a_hat_b_hat = ci_upper_a_hat_b_hat)
+  }
+
+  res_list <- list(t = t,
+                   alpha_hat = alpha_hat, beta_hat = beta_hat, sigma_hat_squared_alpha_hat_beta_hat = sigma_hat_squared_alpha_hat_beta_hat,
+                   a_hat = a_hat, b_hat = b_hat, sigma_hat_squared_a_hat_b_hat = sigma_hat_squared_a_hat_b_hat)
+
+  return(c(res_list, res_list_with_t_0))
+}
 ```
+Tausche die Namen wegen der Vorschrift für $X_i$.
+```{r}
+x <- c(1, 1, 2, 3, 5, 3, 7, 6, 8, 9)
+y <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+t_0 <- 3.8
+gamma <- 0.95
+aufgabe_2 <- ci_simple_lin_reg(x = x, y = y, gamma = gamma, t_0 = t_0)
+```
+Modell: $X_j = a + by_j + Z_i, a, b \in\mathbb{R}$.
+
+Setze nun
+$\sigma_y^2 = \frac{1}{n}\sum\limits_{i=1}^{n}(y_i-\bar{y})^2$
+mit
+$\bar{y}=\frac{1}{n}\sum\limits_{i=1}^{n}y_i$
+und
+$t_j = \frac{y_j-\bar{y}}{\sigma_y}, j=1, \ldots, n$.
+
 Dann sind die ML Schätzer:
 $$\hat{\alpha} = \bar{X}$$
 $$\hat{\beta} = \bar{Xy}$$
 $$\hat{\sigma}^2 = \bar{X^2} - \bar{X}^2 - \bar{Xy}^2$$
 ```{r}
-x_bar <- mean(x)
-alpha_hat <- x_bar
+cat('alpha_hat:', aufgabe_2$alpha_hat, ', beta_hat:', aufgabe_2$beta_hat, ', sigma_hat_squared_alpha_hat_beta_hat:', aufgabe_2$sigma_hat_squared_alpha_hat_beta_hat)
+```
+Der Konfidenzintervallschätzer für $\alpha + \beta t_0$ zum Konfidenzniveau $1-\gamma$ ist gegeben durch:
+$$\left[\hat{\alpha} + \hat{\beta}t_0 - c\sqrt{\frac{\hat{\sigma}^2}{n-2}(1+t_0^2)},
+\hat{\alpha} + \hat{\beta}t_0 + c\sqrt{\frac{\hat{\sigma}^2}{n-2}(1+t_0^2)}\right]$$
+```{r}
+cat('Der Konfidenzintervallschaetzer fuer alpha + beta*t_0 zum Konfidenzniveau 1-gamma:', 1 - gamma, 'ist: [', aufgabe_2$ci_lower_alpha_hat_beta_hat, ',', aufgabe_2$ci_upper_alpha_hat_beta_hat, '], mit einer Breite von', aufgabe_2$ci_upper_alpha_hat_beta_hat - aufgabe_2$ci_lower_alpha_hat_beta_hat)
 
-x_y_bar <- mean(x * y)
-beta_hat <- x_y_bar
-
-sigma_hat_squared <- mean(x^2) - x_bar^2 - x_y_bar^2
-
-c <- qt(df = n - 1, p = 1 - (gamma / 2))
-term <- c * sqrt((sigma_hat_squared / (n - 2)) * (1 + t_0^2))
-ci_lower <- alpha_hat + beta_hat * t_0 - term
-ci_upper <- alpha_hat + beta_hat * t_0 + term
-
-cat('Das Konfidenzintervall zum Konfidenzniveau', gamma, 'ist: [', ci_lower, ',', ci_upper, '], mit einer Breite von', ci_upper - ci_lower, '.')
-
+```
+Rücktransformation in $\hat{a}, \hat{b}$:
+```{r}
+cat('a_hat:', aufgabe_2$a_hat, ', b_hat:', aufgabe_2$b_hat, 'sigma_hat_squared_a_hat_b_hat:', aufgabe_2$sigma_hat_squared_a_hat_b_hat)
+```
+Das Konfidenzintervallschätzer für $a + b\cdot t_0$ zum Konfidenzniveau $1-\gamma$ ist gegeben durch:
+$$\Bigg[\hat{a}+\hat{b}y_0 - t_{n-2,1-\frac{\gamma}{2}}\sqrt{\frac{\hat{\sigma}^2}{n-2}\left(1+\frac{\left(y_0-\overline{y}\right)^2}{\sigma_y^2}\right)},$$
+$$\hat{a}+\hat{b}y_0 + t_{n-2,1-\frac{\gamma}{2}}\sqrt{\frac{\hat{\sigma}^2}{n-2}\left(1+\frac{\left(y_0-\overline{y}\right)^2}{\sigma_y^2}\right)}\Bigg]$$
+mit
+$$t_0 = \frac{\left(y_0-\bar{y}\right)}{\sigma_y}$$
+also
+$$y_0 = (t_0\cdot\sigma_y)+\bar{y}$$
+```{r}
+cat('Der Konfidenzintervallschaetzer fuer a + b*t_0 zum Konfidenzniveau 1-gamma:', 1 - gamma, 'ist: [', aufgabe_2$ci_lower_a_hat_b_hat, ',', aufgabe_2$ci_upper_a_hat_b_hat, '], mit einer Breite von', aufgabe_2$ci_upper_a_hat_b_hat - aufgabe_2$ci_lower_a_hat_b_hat)
 ```
 ## Aufgabe 3
 
@@ -86,37 +141,20 @@ Die Resultate von gleichgenauen Messungen der Eindringtiefe $x_i$ eines Projekti
 
 Nehmen Sie an, dass die beobachteten Eindringtiefen ermittelte Werte von unabhängigen Zufallsvariablen $X_i \sim \mathcal{N}(a + bv_i, \sigma^2)$ mit unbekannten Parametern $a, b \in\mathbb{R}$ und $\sigma^2 > 0$ sind.
 Erstellen Sie eine grafische Darstellung des Konfidenzgürtels zum Konfidenzniveau 0.95 für $a + bv$, $v \in\mathbb{R}$.
-```{r}
-x <- c(4, 8, 10, 14, 16, 20, 19, 23, 26, 30, 31, 36, 37)
-n <- length(x)
-v <- c(41, 50, 81, 104, 120, 139, 154, 180, 208, 241, 250, 269, 301)
-gamma <- 0.95
-```
-Aus Beispiel 3.3:
 
 Tausche die Namen wegen der Vorschrift für $X_i$.
-
-Modell: $X_i \sim \mathcal{N}(a + bv_i, \sigma^2)$.
-
-Setze nun $\sigma_v^2 = \frac{1}{n}\sum\limits_{i=1}^{n}(v_i-\overline{v})^2$ mit $\overline{v}=\frac{1}{n}\sum\limits_{i=1}^{n}v_i$ und $y_j = \frac{v_j-\overline{v}}{\sigma_v}, j=1, \ldots, n$.
 ```{r}
-v_bar <- mean(v)
-sigma_v_hat_squared <- (1 / n) * sum((v - v_bar)^2)
-y <- (v - v_bar) / sqrt(sigma_v_hat_squared)
+x <- c(4, 8, 10, 14, 16, 20, 19, 23, 26, 30, 31, 36, 37)
+y <- c(41, 50, 81, 104, 120, 139, 154, 180, 208, 241, 250, 269, 301)
+gamma <- 0.95
 ```
-Dann sind die ML Schätzer:
-$$\hat{\alpha} = \bar{X}$$
-$$\hat{\beta} = \bar{Xy}$$
-$$\hat{\sigma}^2 = \bar{X^2} - \bar{X}^2 - \bar{Xy}^2$$
+Aus Aufgabe 2:
+
 ```{r}
-x_bar <- mean(x)
-alpha_hat <- x_bar
-
-x_y_bar <- mean(x * y)
-beta_hat <- x_y_bar
-
-sigma_hat_squared <- mean(x^2) - x_bar^2 - x_y_bar^2
+aufgabe_3 <- ci_simple_lin_reg(x = x, y = y, gamma = gamma)
 ```
+Grenzen für Konfidenzgürtelschätzer:
+$$\hat{\alpha}+\hat{\beta}t \pm \sqrt{\frac{2}{n-2} F_{2, n-2; 1-\gamma} \hat{\sigma}^2 \left(1+t^2\right)}, t\in\mathbb{R}$$
 ```{r}
 conf_guertel_schaetzer <- function(alpha_hat, beta_hat, t, n, gamma, sigma_hat_squared, lower) {
   term <- sqrt((2 / (n - 2)) *
@@ -129,15 +167,15 @@ conf_guertel_schaetzer <- function(alpha_hat, beta_hat, t, n, gamma, sigma_hat_s
 }
 ```
 ```{r}
-plot(v ~ x, main = 'Originaldaten')
-plot(x, y, main = 'Normalisierte Daten')
-schaetzer_upper <- lapply(X = x, FUN = function(x) conf_guertel_schaetzer(alpha_hat = alpha_hat, beta_hat = beta_hat, t = x, n = n, gamma = gamma, sigma_hat_squared = sigma_hat_squared, lower = FALSE))
-schaetzer_lower <- lapply(X = x, FUN = function(x) conf_guertel_schaetzer(alpha_hat = alpha_hat, beta_hat = beta_hat, t = x, n = n, gamma = gamma, sigma_hat_squared = sigma_hat_squared, lower = TRUE))
-plot(x, v, main = 'green: untere Grenze, red: obere Grenze des Konfidenzguertelschaetzers')
-# points(x, schaetzer_lower, col = 'green')
-lines(x, schaetzer_lower, col = 'green')
-# points(x, schaetzer_upper, col = 'red')
-lines(x, schaetzer_upper, col = 'red')
-
+plot(x, y, main = 'Originaldaten')
+plot(x, aufgabe_3$t, main = 'Normalisierte Daten')
+```
+```{r}
+schaetzer_upper_a_hat_b_hat <- sapply(X = aufgabe_3$t, FUN = function(x) conf_guertel_schaetzer(alpha_hat = aufgabe_3$a_hat, beta_hat = aufgabe_3$b_hat, t = x, n = length(aufgabe_3$t), gamma = gamma, sigma_hat_squared = aufgabe_3$sigma_hat_squared_a_hat_b_hat, lower = FALSE))
+schaetzer_lower_a_hat_b_hat <- sapply(X = aufgabe_3$t, FUN = function(x) conf_guertel_schaetzer(alpha_hat = aufgabe_3$a_hat, beta_hat = aufgabe_3$b_hat, t = x, n = length(aufgabe_3$t), gamma = gamma, sigma_hat_squared = aufgabe_3$sigma_hat_squared_a_hat_b_hat, lower = TRUE))
+plot(x, aufgabe_3$t, xlim = c(min(x), max(x)), ylim = c(min(schaetzer_lower_a_hat_b_hat), max(schaetzer_upper_a_hat_b_hat)))
+lines(x, schaetzer_upper_a_hat_b_hat, col = 'green')
+lines(x, schaetzer_lower_a_hat_b_hat, col = 'red')
+```
 ```
 
